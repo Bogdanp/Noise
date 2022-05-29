@@ -1,25 +1,57 @@
 import Noise
 import XCTest
 
+var r: Racket!
+
 class RacketTest: XCTestCase {
-  func test() {
-    let r = Racket()
+  override class func setUp() {
+    // Runtime-paths are relative to `(find-system-path 'exec-file)`,
+    // so our bundle needs to contain an `exec-file` (that doesn't
+    // have to actually be executable) from which the runtime folder
+    // path can be derived.  So, the easiest solution in this case is
+    // to add a "cookie" file whose sole purpose is to help us work
+    // out the paths.
+    let cookiePath = Bundle.module.resourceURL!
+      .appendingPathComponent("Modules")
+      .appendingPathComponent("cookie")
+      .path
+
+    r = Racket(execPath: cookiePath)
     r.bracket {
       r.load(zo: Bundle.module.url(forResource: "Modules/mods", withExtension: "zo")!)
     }
+  }
 
+  func testApplication() {
     r.bracket {
       let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("fib"), Val.null))
       let fib = r.require(Val.symbol("fib"), from: mod).car()!
       let n = fib.apply(Val.cons(Val.fixnum(8), Val.null))!
       XCTAssertEqual(n.car()!.fixnum(), 21)
     }
+  }
 
+  func testBytestring() {
     r.bracket {
       let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("loud"), Val.null))
       let exclaim = r.require(Val.symbol("exclaim"), from: mod).car()!
       let res = exclaim.apply(Val.cons(Val.string("hello"), Val.null))!
       XCTAssertEqual(res.car()?.bytestring()!, "hello!!!")
+    }
+  }
+
+  func testHttp() {
+    r.bracket {
+      let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("http"), Val.null))
+      let proc = r.require(Val.symbol("get"), from: mod).car()!
+      let res = proc.apply(Val.cons(Val.string("defn.io"), Val.null))!
+      let status = res.car()!.fixnum()!
+      let content = res.cdr()!.car()!.bytestring()!
+      XCTAssertEqual(status, 200)
+
+      let re = try! NSRegularExpression(pattern: "<title>defn.io</title>")
+      let matches = re.numberOfMatches(in: content, range: NSMakeRange(0, content.count))
+      XCTAssertEqual(matches, 1)
     }
   }
 }
