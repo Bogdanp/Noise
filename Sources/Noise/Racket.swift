@@ -10,6 +10,15 @@ let ARCH = "arm64-ios"
 #endif
 
 /// The Racket runtime.
+///
+/// # Threading
+///
+/// The thread on which the runtime is instantiated is considered the
+/// main Racket place.  All Racket operations must be run on that
+/// thread.  You may work with Chez Scheme values and call Chez Scheme
+/// primitives from other threads (see `bracket` and `activate`).
+///
+/// - Warning: Only one instance may be created per process.
 public struct Racket {
   public init(execPath: String = "racket") {
     let petiteURL = Bundle.module.url(forResource: "boot/\(ARCH)/petite", withExtension: "boot")!
@@ -30,6 +39,9 @@ public struct Racket {
   }
 
   /// Loads compiled Racket code.
+  ///
+  /// - Warning: This function must be called from the same thread the
+  /// Racket runtime was initialized on.
   public func load(zo: URL) {
     let path = zo.path.utf8CString.cstring()
     racket_embedded_load_file(path, 1)
@@ -37,6 +49,9 @@ public struct Racket {
   }
 
   /// Requires `what` from the module at path `mod`.
+  ///
+  /// - Warning: This function must be called from the same thread the
+  /// Racket runtime was initialized on.
   public func require(_ what: Val, from mod: Val) -> Val {
     return Val(ptr: racket_dynamic_require(mod.ptr, what.ptr))
   }
@@ -50,13 +65,13 @@ public struct Racket {
     return res
   }
 
-  /// Makes the current thread known to Racket.
+  /// Makes the current thread known to Chez Scheme.
   ///
-  /// - Warning: Accessing Racket data from inactive threads races
-  /// against the garbage collector.
-  /// - Warning: Active threads that aren't running Racket code block
-  /// the garbage collector, so deactivate unused threads with <#method
-  /// deactivate>.
+  /// - Warning: Accessing Chez Scheme data from inactive threads
+  /// races against the garbage collector.
+  /// - Warning: Active threads that aren't running Scheme code block
+  /// the garbage collector, so deactivate unused threads with
+  /// `deactivate`.
   public func activate() {
     racket_activate_thread()
   }
@@ -66,12 +81,11 @@ public struct Racket {
   }
 }
 
-/// An unsafe wrapper for Racket values.
+/// An unsafe wrapper for Chez Scheme values.
 ///
-/// - Warning: Values may be moved by the Racket GC at any time, so
-/// these helpers should mainly be used to create data to be passed
-/// into Racket, and to copy data from Racket within activated
-/// threads.
+/// - Warning: Values may be moved by the GC at any time, so these
+/// helpers should mainly be used to create data to be passed into
+/// Racket, and to copy data from Racket within activated threads.
 public struct Val {
   let ptr: ptr
 
@@ -79,12 +93,12 @@ public struct Val {
   public static let f = Val(ptr: racket_false!)
   public static let t = Val(ptr: racket_true!)
 
-  /// Creates a Racket fixnum.
+  /// Creates a Chez Scheme fixnum.
   public static func fixnum(_ i: Int) -> Val {
     return Val(ptr: racket_fixnum(i));
   }
 
-  /// Creates a Racket symbol by copying a String.
+  /// Creates a Chez Scheme symbol by copying a String.
   public static func symbol(_ s: String) -> Val {
     let c = s.utf8CString.cstring()
     let p = racket_symbol(c)
@@ -92,7 +106,7 @@ public struct Val {
     return Val(ptr: p!)
   }
 
-  /// Creates a Racket string by copying a regular String.
+  /// Creates a Chez Scheme string by copying a regular String.
   public static func string(_ s: String) -> Val {
     let utf8 = s.utf8CString
     let c = utf8.cstring()
@@ -172,22 +186,7 @@ public struct Val {
     return racket_fixnum_value(ptr)
   }
 
-  /// Copies a Racket bytevector into a Swift array, panicking if
-  /// the value is not a bytevector.
-  ///
-  /// When the `nullTerminated` argument is `true`, the bytevector
-  /// will contain an extra 0 byte at the end.
-  public func unsafeBytevector(nullTerminated: Bool = false) -> [CChar] {
-    let len = Int(racket_bytevector_length(ptr))
-    let data = racket_bytevector_data(ptr)!
-    var res = Array<CChar>(repeating: 0, count: nullTerminated ? len+1 : len)
-    res.withUnsafeMutableBytes { dst in
-      dst.copyBytes(from: UnsafeRawBufferPointer(start: data, count: Int(len)))
-    }
-    return res
-  }
-
-  /// Copies a Racket bytevector value into a String.
+  /// Copies a Chez Scheme bytevector value into a String.
   public func bytestring() -> String? {
     if racket_bytevectorp(ptr) == 1 {
       return unsafeBytestring()
@@ -195,12 +194,27 @@ public struct Val {
     return nil
   }
 
-  /// Copies a Racket bytevector value into a String, panicking if the
-  /// value is not a bytevector.
+  /// Copies a Chez Scheme bytevector value into a String, panicking
+  /// if the value is not a bytevector.
   public func unsafeBytestring() -> String? {
-    return unsafeBytevector(nullTerminated: true).withUnsafeBufferPointer { buf -> String? in
+    return unsafeBytevector(nulTerminated: true).withUnsafeBufferPointer { buf -> String? in
       return String(validatingUTF8: buf.baseAddress!)
     }
+  }
+
+  /// Copies a Chez Scheme bytevector into a Swift array, panicking if
+  /// the value is not a bytevector.
+  ///
+  /// When the `nulTerminated` argument is `true`, the bytevector will
+  /// contain an extra 0 byte at the end.
+  public func unsafeBytevector(nulTerminated: Bool = false) -> [CChar] {
+    let len = Int(racket_bytevector_length(ptr))
+    let data = racket_bytevector_data(ptr)!
+    var res = Array<CChar>(repeating: 0, count: nulTerminated ? len+1 : len)
+    res.withUnsafeMutableBytes { dst in
+      dst.copyBytes(from: UnsafeRawBufferPointer(start: data, count: Int(len)))
+    }
+    return res
   }
 }
 
