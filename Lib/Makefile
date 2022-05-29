@@ -1,5 +1,5 @@
 libracketcs-universal-macos.a: libracketcs-arm64-macos.a libracketcs-x86_64-macos.a
-	lipo -create -output $@ $<
+	lipo -create -output $@ libracketcs-arm64-macos.a libracketcs-x86_64-macos.a
 
 .PHONY: clean
 clean:
