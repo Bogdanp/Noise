@@ -1,5 +1,7 @@
 #if defined(__x86_64__)
 # include "chezscheme-x86_64-macos.h"
+#elif defined(__arm64__)
+# include "chezscheme-arm64-macos.h"
 #else
 # error "unsupported platform"
 #endif
