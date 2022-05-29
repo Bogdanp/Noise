@@ -16,7 +16,7 @@ let package = Package(
         .copy("boot"),
       ],
       linkerSettings: [
-        .linkedLibrary("curses"),
+        .linkedLibrary("curses", .when(platforms: [.macOS])),
         .linkedLibrary("iconv"),
       ]
     ),
