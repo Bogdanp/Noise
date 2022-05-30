@@ -7,6 +7,8 @@ let ARCH = "x86_64-macos"
 let ARCH = "arm64-macos"
 #elseif arch(arm64) && os(iOS)
 let ARCH = "arm64-ios"
+#else
+#error("unsupported platform")
 #endif
 
 /// The Racket runtime.
@@ -89,8 +91,13 @@ public struct Racket {
 public struct Val {
   let ptr: ptr
 
+  /// The empty list.
   public static let null = Val(ptr: racket_nil!)
+
+  /// The true value.
   public static let f = Val(ptr: racket_false!)
+
+  /// The false value.
   public static let t = Val(ptr: racket_true!)
 
   /// Creates a Chez Scheme fixnum.
@@ -200,6 +207,17 @@ public struct Val {
     return unsafeBytevector(nulTerminated: true).withUnsafeBufferPointer { buf -> String? in
       return String(validatingUTF8: buf.baseAddress!)
     }
+  }
+
+  /// Copies a Chez Scheme bytevector into an `Array` of `CChar`s.
+  ///
+  /// - Warning: Chez Scheme `byte`s are unsigned, but they get
+  /// converted to signed in Swift.
+  public func bytevector(nulTerminated nul: Bool = false) -> [CChar]? {
+    if racket_bytevectorp(ptr) == 1 {
+      return unsafeBytevector(nulTerminated: nul)
+    }
+    return nil
   }
 
   /// Copies a Chez Scheme bytevector into a Swift array, panicking if

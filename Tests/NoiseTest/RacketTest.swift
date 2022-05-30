@@ -40,6 +40,15 @@ class RacketTest: XCTestCase {
     }
   }
 
+  func testBytevector() {
+    r.bracket {
+      let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("bytes"), Val.null))
+      let get = r.require(Val.symbol("get-bytes"), from: mod).car()!
+      let res = get.apply(Val.null)!.car()!.bytevector()!.map({ UInt8(bitPattern: $0) })
+      XCTAssertEqual(res, [1, 2, 128, 255])
+    }
+  }
+
   func testHttp() {
     r.bracket {
       let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("http"), Val.null))
