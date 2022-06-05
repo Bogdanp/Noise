@@ -145,7 +145,7 @@ extension String: Readable, Writable {
   }
 }
 
-typealias Symbol = String
+public typealias Symbol = String
 
 extension Array where Element: Readable, Element: Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> [Element]? {
