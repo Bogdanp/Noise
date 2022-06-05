@@ -17,8 +17,8 @@ Racket for your target platforms then run
 
 For example:
 
-    ./Bin/copy-libs.sh arm64-macos /path/to/racket
     ./Bin/copy-libs.sh arm64-ios /path/to/racket
+    ./Bin/copy-libs.sh arm64-macos /path/to/racket
     ./Bin/copy-libs.sh x86_64-macos /path/to/racket
 
 ## License
