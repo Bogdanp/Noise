@@ -11,6 +11,10 @@ let package = Package(
       name: "Noise",
       targets: ["Noise"]
     ),
+    .library(
+      name: "NoiseSerde",
+      targets: ["NoiseSerde"]
+    ),
   ],
   targets: [
     .target(
@@ -26,9 +30,15 @@ let package = Package(
         .linkedLibrary("iconv"),
       ]
     ),
+    .target(
+      name: "NoiseSerde"
+    ),
     .testTarget(
       name: "NoiseTest",
-      dependencies: ["Noise"],
+      dependencies: [
+        "Noise",
+        "NoiseSerde",
+      ],
       resources: [
         .copy("Modules"),
       ]
