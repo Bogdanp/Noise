@@ -12,6 +12,10 @@ let package = Package(
       targets: ["Noise"]
     ),
     .library(
+      name: "NoiseBackend",
+      targets: ["NoiseBackend"]
+    ),
+    .library(
       name: "NoiseSerde",
       targets: ["NoiseSerde"]
     ),
@@ -28,6 +32,13 @@ let package = Package(
       linkerSettings: [
         .linkedLibrary("curses", .when(platforms: [.macOS])),
         .linkedLibrary("iconv"),
+      ]
+    ),
+    .target(
+      name: "NoiseBackend",
+      dependencies: [
+        "Noise",
+        "NoiseSerde"
       ]
     ),
     .target(

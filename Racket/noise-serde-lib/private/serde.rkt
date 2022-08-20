@@ -121,6 +121,10 @@
 
 ;; varint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(provide
+ read-uvarint
+ write-uvarint)
+
 (define (write-uvarint v [out (current-output-port)])
   (define bs
     (let loop ([bs null] [n v])
