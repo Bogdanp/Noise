@@ -38,11 +38,14 @@
  (struct-out record-info)
  (struct-out record-field))
 
+(define record-id-seq 0)
+(define (next-record-id!)
+  (begin0 record-id-seq
+    (set! record-id-seq (add1 record-id-seq))))
+
 (define record-infos (make-hasheqv))
 (struct record-info (id name constructor fields))
 (struct record-field (id type accessor))
-
-(define-syntax known-records (make-hasheq))
 
 (define-syntax (define-record stx)
   (define (id-stx->keyword stx)
@@ -58,15 +61,8 @@
              #:with arg #'[id def]
              #:with opt? #t))
 
-  (define known (syntax-local-value #'known-records))
   (syntax-parse stx
-    [(_ name:id id:number fld:record-field ...)
-     #:fail-unless (exact-nonnegative-integer? (syntax-e #'id))
-     "guid must be a positive integer"
-     #:fail-when (hash-has-key? known (syntax-e #'id))
-     (let ([other (hash-ref known (syntax-e #'id))])
-       (format "record ~a (defined in \"~a\") already has guid ~a"
-               (car other) (syntax-source (cadr other)) (syntax-e #'id)))
+    [(_ name:id fld:record-field ...)
      #:with id? (format-id #'name "~a?" #'name)
      #:with record-id (format-id #'name "record:~a" #'name)
      #:with constructor-id (format-id #'name "make-~a" #'name)
@@ -91,8 +87,8 @@
                                            (list kwd ctc)))
      #:with (accessor-id ...) (for/list ([fld (in-list (syntax-e #'(fld.id ...)))])
                                 (format-id fld "~a-~a" #'name fld))
-     (hash-set! known (syntax-e #'id) (list (syntax-e #'name) stx))
      #'(begin
+         (define id (next-record-id!))
          (struct name (fld.id ...) #:transparent
            #:methods gen:record
            [(define (write-record self [out (current-output-port)])
@@ -111,7 +107,7 @@
            rackunit)
 
   (test-case "record serde"
-    (define-record Human #xFF10
+    (define-record Human
       [name String string?]
       [age Varint (integer-in 0 100)])
     (define h (make-Human #:name "Bogdan" #:age 30))
@@ -164,7 +160,8 @@
 
  (struct-out field-type))
 
-(struct field-type (read-proc write-proc swift-proc))
+(struct field-type
+  (read-proc write-proc swift-proc))
 
 (define (read-field t [in (current-input-port)])
   ((field-type-read-proc t) in))
@@ -242,7 +239,7 @@
 
 (module+ test
   (test-case "complex field serde"
-    (define-record Example #xFF01
+    (define-record Example
       [b Bool boolean?]
       [i Varint integer?]
       [s String string?]
