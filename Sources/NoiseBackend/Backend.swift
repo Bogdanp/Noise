@@ -32,7 +32,7 @@ public class Backend<Record: Readable & Writable> {
   }
 
   private func serve(_ zo: URL, _ mod: String, _ proc: String) {
-    let r = Racket()
+    let r = Racket(execPath: zo.path)
     r.bracket {
       r.load(zo: zo)
       let serve = r.require(Val.symbol(proc), from: Val.cons(Val.symbol("quote"), Val.cons(Val.symbol(mod), Val.null))).car()!
