@@ -2,13 +2,19 @@ import Foundation
 import RacketCS
 
 #if arch(x86_64)
-let ARCH = "x86_64-macos"
-#elseif arch(arm64) && os(macOS)
-let ARCH = "arm64-macos"
-#elseif arch(arm64) && os(iOS)
-let ARCH = "arm64-ios"
+let ARCH = "x86_64"
+#elseif arch(arm64)
+let ARCH = "arm64"
 #else
 #error("unsupported platform")
+#endif
+
+#if os(macOS)
+let OS = "macos"
+#elseif os(iOS)
+let OS = "ios"
+#else
+#error("unsupported OS")
 #endif
 
 /// The Racket runtime.
@@ -23,9 +29,9 @@ let ARCH = "arm64-ios"
 /// - Warning: Only one instance may be created per process.
 public struct Racket {
   public init(execPath: String = "racket") {
-    let petiteURL = Bundle.module.url(forResource: "boot/\(ARCH)/petite", withExtension: "boot")!
-    let schemeURL = Bundle.module.url(forResource: "boot/\(ARCH)/scheme", withExtension: "boot")!
-    let racketURL = Bundle.module.url(forResource: "boot/\(ARCH)/racket", withExtension: "boot")!
+    let petiteURL = Bundle.module.url(forResource: "boot/\(ARCH)-\(OS)/petite", withExtension: "boot")!
+    let schemeURL = Bundle.module.url(forResource: "boot/\(ARCH)-\(OS)/scheme", withExtension: "boot")!
+    let racketURL = Bundle.module.url(forResource: "boot/\(ARCH)-\(OS)/racket", withExtension: "boot")!
 
     var args = racket_boot_arguments_t()
     args.exec_file = execPath.utf8CString.cstring()
