@@ -1,3 +1,4 @@
 *.xcframework
 .build/
 .swiftpm/
+compiled/

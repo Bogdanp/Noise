@@ -7,6 +7,7 @@
  read-record
  write-record
 
+ field-type?
  Bool
  Bytes
  Listof
