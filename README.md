@@ -20,6 +20,15 @@ The `NoiseSerde` package and its associated `noise/serde` module (from
 can automatically be shared (via serialization & deserialization)
 between Racket and Swift.
 
+To use `NoiseSerde` from racket, you will have to install
+`noise-serde-lib`:
+
+    raco pkg install Racket/noise-serde-lib/
+
+You may also want to install its docs:
+
+    raco pkg install Racket/noise-serde-doc/
+
 ## NoiseBackend
 
 The `NoiseBackend` package and its associated `noise/backend` module
