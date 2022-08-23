@@ -5,7 +5,6 @@ simplify embedding.  See `Tests/NoiseTest/RacketTest.swift` for an
 example.
 
 ## Usage
-### Noise
 
 Clone this repository locally and run `make`, then add it to your
 project as a local dependency.  [Git LFS][LFS] is used to store the
