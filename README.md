@@ -6,7 +6,9 @@ embedding.  See `Tests/NoiseTest/RacketTest.swift` for an example.
 ## Usage
 
 Clone this repository locally and run `make`, then add it to your
-project as a local dependency.
+project as a local dependency.  [Git LFS][lfs] is used to store the
+binary files in `Lib/` and in `Sources/Noise/boot`, so you will need
+have LFS installed in order to pull those files.
 
 ## Updating Racket
 
@@ -28,4 +30,5 @@ For example:
 See [this page][racket-license] for information on Racket's license.
 
 [Racket]: https://racket-lang.org
+[lfs]: https://git-lfs.github.com
 [racket-license]: https://github.com/racket/racket/blob/82ca0f76f2e18f242db742991596eb509ce49cc1/LICENSE.txt
