@@ -58,10 +58,20 @@
     (datum->syntax stx (string->keyword (symbol->string (syntax-e stx)))))
 
   (define-syntax-class record-field
+    (pattern [id:id ft:expr]
+             #:with kwd (id-stx->keyword #'id)
+             #:with arg #'id
+             #:with opt? #f
+             #:with ctc #'any/c)
     (pattern [id:id ft:expr ctc:expr]
              #:with kwd (id-stx->keyword #'id)
              #:with arg #'id
              #:with opt? #f)
+    (pattern [(id:id def:expr) ft:expr]
+             #:with kwd (id-stx->keyword #'id)
+             #:with arg #'[id def]
+             #:with opt? #t
+             #:with ctc #'any/c)
     (pattern [(id:id def:expr) ft:expr ctc:expr]
              #:with kwd (id-stx->keyword #'id)
              #:with arg #'[id def]
