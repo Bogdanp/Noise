@@ -1,0 +1,22 @@
+name: CI
+on: [push]
+jobs:
+  build:
+    runs-on: macos-12
+    name: Build & Test
+    steps:
+      - uses: actions/checkout@master
+        with:
+          lfs: true
+      - uses: swift-actions/setup-swift@v1
+        with:
+          swift-version: '5.6.1'
+      - uses: Bogdanp/setup-racket@v1.8.1
+        with:
+          variant: 'CS'
+          version: '8.6'
+          packages: 'http-easy-lib'
+      - run: git lfs checkout
+      - run: make
+      - run: swift build
+      - run: swift test
