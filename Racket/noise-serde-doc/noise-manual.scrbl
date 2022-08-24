@@ -80,8 +80,8 @@ definitions for records reachable from a given root module.
 
 @subsection{Field Types}
 
-@deftech{Field types} control how individual values are encoded and
-decoded.
+@deftech{Field types} control how individual values are serialized and
+deserialized.
 
 @defproc[(field-type? [v any/c]) boolean?]{
   Returns @racket[#t] when @racket[v] is a @tech{field type}.
@@ -98,10 +98,10 @@ decoded.
 
   @tech{Field types} for primitive values.
 
-  The @racket[UVarint] and @racket[Varint] field types encode unsigned
-  and signed integer values, respectively, using a variable-length
-  encoding.  In Swift, these values are represented by @tt{UInt64} and
-  @tt{Int64}, respectively.
+  The @racket[UVarint] and @racket[Varint] field types serialize
+  unsigned and signed integer values, respectively, using a
+  variable-length encoding.  In Swift, these values are represented by
+  @tt{UInt64} and @tt{Int64}, respectively.
 }
 
 @defproc[(Listof [t field-type?]) field-type?]{
@@ -111,13 +111,13 @@ decoded.
 }
 
 @defthing[Record field-type?]{
-  A @tech{field type} that encodes record values by tagging them with
-  their globally-unique id.  In Swift, these values are represented by
-  the @tt{Record} enum.
+  A @tech{field type} that serializes record values by tagging them
+  with their globally-unique id.  In Swift, these values are
+  represented by the @tt{Record} enum.
 }
 
 @defproc[(Untagged [ri record-info?]) field-type?]{
-  A constructor for @tech{field types} that encode records without
+  A constructor for @tech{field types} that serialize records without
   tagging.  Useful for creating homogeneous lists of records and for
   embedding records directly into one another.
 }
