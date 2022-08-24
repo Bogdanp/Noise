@@ -25,10 +25,11 @@
                   (close-input-port server-in)
                   (close-output-port server-out)]
                  [`(response ,id ,data)
-                  (with-handlers ([exn:fail? (λ (e)
-                                               ((error-display-handler)
-                                                (format "backend/serve write failed: ~a" (exn-message e))
-                                                e))])
+                  (with-handlers ([exn:fail?
+                                   (λ (e)
+                                     ((error-display-handler)
+                                      (format "backend/serve write failed: ~a" (exn-message e))
+                                      e))])
                     (write-response id data server-out)
                     (flush-output server-out))
                   (loop)]
@@ -38,8 +39,7 @@
              server-in
              (lambda (in)
                (define-values (id data)
-                 (parameterize-break #f
-                   (read-request in)))
+                 (read-request in))
                (define request-cust
                  (make-custodian))
                (define request-thd
