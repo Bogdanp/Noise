@@ -33,7 +33,7 @@ definitions for records reachable from a given root module.
 
 @defproc[(record-info? [v any/c]) boolean?]{
   Returns @racket[#t] when @racket[v] is a value containing runtime
-  informatino about a @tech{record}.
+  information about a @tech{record}.
 }
 
 @defproc[(read-record [in input-port? (current-input-port)]) any/c]{
