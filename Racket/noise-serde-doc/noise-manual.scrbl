@@ -23,17 +23,17 @@ installed from a cloned version of Noise.
 @defmodule[noise/serde]
 
 A @deftech{record} is a data structure that is shared between Swift
-and Racket.  In both languages, they are represented by structs.
-
-Use the @tt{raco} command @tt{noise-serde-codegen} to generate Swift
+and Racket.  In both languages, they are represented by structs.  Use
+the @tt{raco} command @tt{noise-serde-codegen} to generate Swift
 definitions for records reachable from a given root module.
 
 @defproc[(record? [v any/c]) boolean?]{
   Returns @racket[#t] when @racket[v] is a @tech{record}.
 }
 
-@defproc[(field-type? [v any/c]) boolean?]{
-  Returns @racket[#t] when @racket[v] is a field type.
+@defproc[(record-info? [v any/c]) boolean?]{
+  Returns @racket[#t] when @racket[v] is a value containing runtime
+  informatino about a @tech{record}.
 }
 
 @defproc[(read-record [in input-port? (current-input-port)]) any/c]{
@@ -52,13 +52,18 @@ definitions for records reachable from a given root module.
                            [field-id field-type field-ctc-expr]
                            [(field-id default-expr) field-type]
                            [(field-id default-expr) field-type field-ctc-expr]])
-         #:contracts ([field-type (or/c field-type? record?)])]{
+         #:contracts ([field-type field-type?])]{
 
   Defines a record called @racket[name] with the given set of
   @racket[field]s.  Records are backed by structs and generate smart
-  constructors that take a keyword argument for every field.  The
-  smart constructors are named by prepending @tt{make-} to the record
-  name.
+  constructors that take a keyword argument for every field.  Smart
+  constructors are named by prepending @tt{make-} to the record name
+  and bound at phase level 0.
+
+  Opaque information about each record type is bound at phase level 0
+  to a variable named by prepending @tt{record:} to the record name.
+  Every record gets assigned a globally-unique identifier.  The GUIDs
+  are issued in definition order.
 
   @examples[
     (require noise/serde
@@ -69,8 +74,66 @@ definitions for records reachable from a given root module.
     (make-Human
      #:name "Bogdan"
      #:age 30)
+    record:Human
   ]
 }
 
+@subsection{Field Types}
+
+@deftech{Field types} control how individual values are encoded and
+decoded.
+
+@defproc[(field-type? [v any/c]) boolean?]{
+  Returns @racket[#t] when @racket[v] is a @tech{field type}.
+}
+
+@deftogether[(
+  @defthing[Bool field-type?]
+  @defthing[Bytes field-type?]
+  @defthing[Record field-type?]
+  @defthing[String field-type?]
+  @defthing[Symbol field-type?]
+  @defthing[UVarint field-type?]
+  @defthing[Varint field-type?]
+)]{
+
+  @tech{Field types} for primitive values.
+
+  The @racket[Record] field type encodes heterogeneous record values
+  by tagging each value with the record's globally-unique id.
+
+  The @racket[UVarint] and @racket[Varint] field types encode unsigned
+  and signed integer values, respectively, using a variable-length
+  encoding.
+}
+
+@defproc[(Listof [t field-type?]) field-type?]{
+  A constructor for @tech{field types} that represent a list of values
+  of type @racket[t].
+
+  In Swift, these values decode into arrays.
+}
+
+@defproc[(Untagged [ri record-info?]) field-type?]{
+  A constructor for @tech{field types} that encode records without
+  tagging.  Useful for creating homogeneous lists of records and for
+  embedding records directly into one another.
+}
+
+
 @section{Backends}
 @defmodule[noise/backend]
+
+@defproc[(serve [in-fd exact-integer?]
+                [out-fd exact-integer?]
+                [handler (-> any/c any/c)]) (-> void?)]{
+
+  Converts the file descriptors represented by @racket[in-fd] and
+  @racket[out-fd] to an input port and an output port, respectively,
+  then spawns a thread that reads requests from the input port in the
+  form of @tech{records}.  Calls @racket[handler] with every request
+  and writes the result value to the output port.  Handlers are run in
+  their own threads and multiple requests may be handled concurrently.
+
+  Returns a procedure that stops the server when called.
+}
