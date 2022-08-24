@@ -19,7 +19,7 @@ package will not be published to the package index and it should be
 installed from a cloned version of Noise.
 
 
-@section{Serialization & Deserialization}
+@section[#:tag "serde"]{Serialization & Deserialization}
 @defmodule[noise/serde]
 
 A @deftech{record} is a data structure that is shared between Swift
@@ -90,7 +90,6 @@ decoded.
 @deftogether[(
   @defthing[Bool field-type?]
   @defthing[Bytes field-type?]
-  @defthing[Record field-type?]
   @defthing[String field-type?]
   @defthing[Symbol field-type?]
   @defthing[UVarint field-type?]
@@ -99,19 +98,22 @@ decoded.
 
   @tech{Field types} for primitive values.
 
-  The @racket[Record] field type encodes heterogeneous record values
-  by tagging each value with the record's globally-unique id.
-
   The @racket[UVarint] and @racket[Varint] field types encode unsigned
   and signed integer values, respectively, using a variable-length
-  encoding.
+  encoding.  In Swift, these values are represented by @tt{UInt64} and
+  @tt{Int64}, respectively.
 }
 
 @defproc[(Listof [t field-type?]) field-type?]{
   A constructor for @tech{field types} that represent a list of values
-  of type @racket[t].
+  of type @racket[t].  In Swift, these values are represented by
+  arrays of the subtype.
+}
 
-  In Swift, these values decode into arrays.
+@defthing[Record field-type?]{
+  A @tech{field type} that encodes record values by tagging them with
+  their globally-unique id.  In Swift, these values are represented by
+  the @tt{Record} enum.
 }
 
 @defproc[(Untagged [ri record-info?]) field-type?]{
@@ -121,7 +123,7 @@ decoded.
 }
 
 
-@section{Backends}
+@section[#:tag "backends"]{Backends}
 @defmodule[noise/backend]
 
 @defproc[(serve [in-fd exact-integer?]
