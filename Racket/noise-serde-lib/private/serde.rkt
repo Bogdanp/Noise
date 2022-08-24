@@ -173,6 +173,7 @@
 
 (provide
  Listof
+ Untagged
 
  (struct-out field-type))
 
@@ -236,18 +237,9 @@
   #:write write-uvarint)
 
 (define (Listof t)
-  (define-values (read-proc write-proc swift-type)
-    (cond
-      [(record-info? t)
-       (values
-        (λ (in) (do-read-record-fileds t in))
-        (λ (v out) (do-write-record-fields t v out))
-        (symbol->string (record-info-name t)))]
-      [else
-       (values
-        (field-type-read-proc t)
-        (field-type-write-proc t)
-        ((field-type-swift-proc t)))]))
+  (define read-proc (field-type-read-proc t))
+  (define write-proc (field-type-write-proc t))
+  (define swift-type ((field-type-swift-proc t)))
   (field-type
    (λ (in)
      (for/list ([_ (in-range (read-varint in))])
@@ -261,6 +253,12 @@
 (define-field-type Record
   #:read read-record
   #:write write-record)
+
+(define (Untagged t)
+  (field-type
+   (λ (in) (do-read-record-fileds t in))
+   (λ (v out) (do-write-record-fields t v out))
+   (λ () (symbol->string (record-info-name t)))))
 
 (module+ test
   (test-case "complex field serde"
@@ -279,10 +277,20 @@
       [title String string?]
       [comments (Listof UVarint) (listof exact-integer?)])
     (define-record Stories
-      [stories (Listof record:Story) (listof Story?)])
+      [stories (Listof (Untagged record:Story)) (listof Story?)])
     (define v
       (Stories
        (list (Story 0 "a" null)
              (Story 1 "b" '(1 2 3)))))
+    (define bs (with-output-to-bytes (λ () (write-field Record v))))
+    (check-equal? v (read-field Record (open-input-bytes bs))))
+
+  (test-case "nested record serde"
+    (define-record A
+      [s String])
+    (define-record B
+      [a (Untagged record:A)])
+    (define v
+      (B (A "test")))
     (define bs (with-output-to-bytes (λ () (write-field Record v))))
     (check-equal? v (read-field Record (open-input-bytes bs)))))

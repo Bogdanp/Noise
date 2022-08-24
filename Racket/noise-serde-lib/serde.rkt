@@ -3,6 +3,7 @@
 (require "private/serde.rkt")
 (provide
  record?
+ record-info?
  define-record
  read-record
  write-record
@@ -14,5 +15,6 @@
  Record
  String
  Symbol
+ Untagged
  UVarint
  Varint)
