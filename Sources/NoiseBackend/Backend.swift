@@ -5,19 +5,19 @@ import NoiseSerde
 
 /// Statistics reported by Backends.
 public struct BackendStats {
-  let totalRequests: UInt64
-  let totalWaitNanos: UInt64
+  public let totalRequests: UInt64
+  public let totalWaitNanos: UInt64
 }
 
 /// Client implementation for an async Racket backend.
-public class Backend<Record: Readable & Writable> {
+public class Backend {
   private let ip = Pipe() // in  from Racket's perspective
   private let op = Pipe() // out from Racket's perspective
 
   private let mu = DispatchSemaphore(value: 1) // mu guards everything below here
   private let out: OutputPort!
-  private var seq = UInt64(0)
-  fileprivate var pending = [UInt64: PendingResponse<Record>]()
+  private var seq = UVarint(0)
+  fileprivate var pending = [UInt64: ResponseHandler]()
   private var totalRequests = UInt64(0)
   private var totalWaitNanos = UInt64(0)
 
@@ -50,36 +50,41 @@ public class Backend<Record: Readable & Writable> {
       guard let id = UVarint.read(from: inp, using: &buf) else {
         preconditionFailure("failed to read response id")
       }
-      guard let data = Record.read(from: inp, using: &buf) else {
-        preconditionFailure("failed to read response data")
-      }
       mu.wait()
-      guard let req = pending[id] else {
+      guard let handler = pending[id] else{
         mu.signal()
         continue
       }
-      pending.removeValue(forKey: id)
       mu.signal()
-      req.fut.resolve(with: data)
+      handler.handle(from: inp, using: &buf)
+      mu.wait()
+      pending.removeValue(forKey: id)
       totalRequests += 1
-      totalWaitNanos += DispatchTime.now().uptimeNanoseconds - req.time.uptimeNanoseconds
+      totalWaitNanos += DispatchTime.now().uptimeNanoseconds - handler.time.uptimeNanoseconds
+      mu.signal()
     }
   }
 
-  public func send(data: Record) -> Future<Record> {
+  public func send<T>(
+    writeProc write: (OutputPort) -> Void,
+    readProc read: @escaping (InputPort, inout Data) -> T
+  ) -> Future<T> {
     mu.wait()
-    defer { mu.signal() }
     let id = seq
-    let req = Request(id: id, data: data)
     seq += 1
-    req.write(to: out)
+    id.write(to: out)
+    write(out)
     out.flush()
-    let fut = Future<Record>()
-    pending[id] = PendingResponse<Record>(id: id, fut: fut)
+    let fut = Future<T>()
+    let handler = ResponseHandlerImpl<T>(id: id, fut: fut, read: read)
+    pending[id] = handler
+    mu.signal()
     return fut
   }
 
   public func stats() -> BackendStats {
+    mu.wait()
+    defer { mu.signal() }
     return BackendStats(
       totalRequests: totalRequests,
       totalWaitNanos: totalWaitNanos
@@ -97,8 +102,19 @@ fileprivate struct Request<Data: Writable>: Writable {
   }
 }
 
-fileprivate struct PendingResponse<Record: Readable & Writable> {
+fileprivate protocol ResponseHandler {
+  var time: DispatchTime { get }
+
+  func handle(from inp: InputPort, using buf: inout Data)
+}
+
+fileprivate struct ResponseHandlerImpl<T>: ResponseHandler {
   let id: UInt64
-  let fut: Future<Record>
+  let fut: Future<T>
+  let read: (InputPort, inout Data) -> T
   let time = DispatchTime.now()
+
+  func handle(from inp: InputPort, using buf: inout Data) {
+    fut.resolve(with: read(inp, &buf))
+  }
 }

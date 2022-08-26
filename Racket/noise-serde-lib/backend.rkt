@@ -2,12 +2,14 @@
 
 (require ffi/unsafe/port
          racket/match
+         "private/backend.rkt"
          "private/serde.rkt")
 
 (provide
+ define-rpc :
  serve)
 
-(define (serve in-fd out-fd handler)
+(define (serve in-fd out-fd)
   (define cust (make-custodian))
   (define thd
     (parameterize ([current-custodian cust])
@@ -24,13 +26,14 @@
                  ['(stop)
                   (close-input-port server-in)
                   (close-output-port server-out)]
-                 [`(response ,id ,data)
+                 [`(response ,id ,response-type ,response-data)
                   (with-handlers ([exn:fail?
                                    (λ (e)
                                      ((error-display-handler)
                                       (format "backend/serve write failed: ~a" (exn-message e))
                                       e))])
-                    (write-response id data server-out)
+                    (write-uvarint id server-out)
+                    (write-field response-type response-data server-out)
                     (flush-output server-out))
                   (loop)]
                  [msg
@@ -38,34 +41,34 @@
             (handle-evt
              server-in
              (lambda (in)
-               (define-values (id data)
-                 (read-request in))
-               (define request-cust
-                 (make-custodian))
-               (define request-thd
-                 (parameterize ([current-custodian request-cust])
-                   (thread
-                    (lambda ()
-                      (define response-data
-                        (handler data))
-                      (thread-resume thd (current-thread))
-                      (thread-send thd `(response ,id ,response-data))))))
-               (thread
-                (lambda ()
-                  (thread-wait request-thd)
-                  (custodian-shutdown-all request-cust)))
+               (with-handlers ([exn:fail? (λ (e)
+                                            ((error-display-handler)
+                                             (format "backend/serve: ~a" (exn-message e))
+                                             e))])
+                 (define req-id (read-uvarint in))
+                 (define rpc-id (read-uvarint in))
+                 (match-define (rpc-info _id _name rpc-args response-type handler)
+                   (hash-ref rpc-infos rpc-id))
+                 (define args
+                   (for/list ([ra (in-list rpc-args)])
+                     (read-field (rpc-arg-type ra) in)))
+                 (define request-cust
+                   (make-custodian))
+                 (define request-thd
+                   (parameterize ([current-custodian request-cust])
+                     (thread
+                      (lambda ()
+                        (define response-data
+                          (apply handler args))
+                        (thread-resume thd (current-thread))
+                        (thread-send thd `(response ,req-id ,response-type ,response-data))))))
+                 (thread
+                  (lambda ()
+                    (thread-wait request-thd)
+                    (custodian-shutdown-all request-cust))))
                (loop)))))))))
   (lambda ()
     (thread-resume thd (current-thread))
     (thread-send thd '(stop))
     (thread-wait thd)
     (custodian-shutdown-all cust)))
-
-(define (read-request in)
-  (values
-   (read-uvarint in)
-   (read-record in)))
-
-(define (write-response id data out)
-  (write-uvarint id out)
-  (write-record data out))

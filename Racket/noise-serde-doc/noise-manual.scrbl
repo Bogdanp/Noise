@@ -18,6 +18,10 @@ Swift and Racket.  Backwards-compatibility is not guaranteed.  This
 package will not be published to the package index and it should be
 installed from a cloned version of Noise.
 
+@(define ev
+   (let ([ev (make-base-eval)])
+     (begin0 ev
+       (ev '(require noise/backend noise/serde racket/contract)))))
 
 @section[#:tag "serde"]{Serialization & Deserialization}
 @defmodule[noise/serde]
@@ -66,8 +70,7 @@ definitions for records reachable from a given root module.
   are issued in definition order.
 
   @examples[
-    (require noise/serde
-             racket/contract)
+    #:eval ev
     (define-record Human
      [name String string?]
      [age UVarint (integer-in 0 125)])
@@ -127,15 +130,43 @@ deserialized.
 @defmodule[noise/backend]
 
 @defproc[(serve [in-fd exact-integer?]
-                [out-fd exact-integer?]
-                [handler (-> any/c any/c)]) (-> void?)]{
+                [out-fd exact-integer?]) (-> void?)]{
 
   Converts the file descriptors represented by @racket[in-fd] and
   @racket[out-fd] to an input port and an output port, respectively,
   then spawns a thread that reads requests from the input port in the
-  form of @tech{records}.  Calls @racket[handler] with every request
-  and writes the result value to the output port.  Handlers are run in
-  their own threads and multiple requests may be handled concurrently.
+  form of @tech{records}.  Request handlers are defined using
+  @racket[define-rpc].  Request handlers are run in their own threads
+  and multiple requests may be handled concurrently.
 
-  Returns a procedure that stops the server when called.
+  Returns a procedure that stops the server when applied.
+}
+
+@defform[
+  #:literals (:)
+  (define-rpc (id arg ... : response-type-expr)
+    body ...+)
+  #:grammar [(arg [arg-label arg-id : arg-type-expr])]
+  #:contracts ([arg-type-expr field-type?]
+               [response-type-expr field-type?])
+]{
+  Defines a procedure named @racket[id] and registers an RPC handler
+  for it in the global handler registry.
+
+  The @tt{noise-serde-codegen} command automatically generates Swift
+  code to handle calling these procedures.  In Swift, the RPC
+  @racket[id], @racket[arg-label]s and @racket[arg-id]s are converted
+  to camel case.  The @racket[arg-label]s have no meaning in Racket.
+
+  @examples[
+    #:eval ev
+    (define-rpc (get-human-name [of h : record:Human] : String)
+      (Human-name h))
+    (get-human-name (make-Human #:name "Bogdan" #:age 30))
+  ]
+}
+
+@defidform[:]{
+  Within a @racket[define-rpc] form, this identifier is used to
+  declare the type of an argument or response type.
 }

@@ -176,7 +176,9 @@
  Listof
  Untagged
 
- (struct-out field-type))
+ (struct-out field-type)
+ read-field
+ write-field)
 
 (struct field-type
   (read-proc write-proc swift-proc))
