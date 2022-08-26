@@ -5,7 +5,8 @@
                      syntax/parse)
          racket/contract
          racket/generic
-         racket/port)
+         racket/port
+         "sequencer.rkt")
 
 ;; record ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -44,14 +45,15 @@
  (struct-out record-info)
  (struct-out record-field))
 
-(define record-id-seq 0)
-(define (next-record-id!)
-  (begin0 record-id-seq
-    (set! record-id-seq (add1 record-id-seq))))
+(struct record-info ([id #:mutable] name constructor fields))
+(struct record-field (id type accessor))
 
 (define record-infos (make-hasheqv))
-(struct record-info (id name constructor fields))
-(struct record-field (id type accessor))
+(define record-info-sequencer
+  (make-sequencer
+   record-infos
+   record-info-name
+   set-record-info-id!))
 
 (define-syntax (define-record stx)
   (define (id-stx->keyword stx)
@@ -104,14 +106,13 @@
      #:with (accessor-id ...) (for/list ([fld (in-list (syntax-e #'(fld.id ...)))])
                                 (format-id fld "~a-~a" #'name fld))
      #'(begin
-         (define id (next-record-id!))
          (struct name (fld.id ...) #:transparent
            #:methods gen:record
            [(define (write-record self [out (current-output-port)])
               (do-write-record record-id self out))])
          (define record-id
-           (record-info id 'name name (list (record-field 'fld.id fld.ft accessor-id) ...)))
-         (hash-set! record-infos id record-id)
+           (record-info #f 'name name (list (record-field 'fld.id fld.ft accessor-id) ...)))
+         (sequencer-add! record-info-sequencer record-id)
          (define/contract (constructor-id constructor-arg ...)
            (->* (required-ctor-arg-ctc ...)
                 (optional-ctor-arg-ctc ...)
