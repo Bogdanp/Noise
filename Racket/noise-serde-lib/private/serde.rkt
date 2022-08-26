@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require (for-syntax racket/base
+                     racket/provide-transform
                      racket/syntax
                      syntax/parse)
          racket/contract
@@ -12,6 +13,7 @@
 
 (provide
  define-record
+ record-out
  record?
  read-record
  write-record)
@@ -81,9 +83,10 @@
 
   (syntax-parse stx
     [(_ name:id fld:record-field ...)
-     #:with id? (format-id #'name "~a?" #'name)
-     #:with record-id (format-id #'name "record:~a" #'name)
+     #:with name? (format-id #'name "~a?" #'name)
      #:with constructor-id (format-id #'name "make-~a" #'name)
+     #:with (fld-accessor ...) (for/list ([arg (in-list (syntax-e #'(fld.id ...)))])
+                                 (format-id #'name "~a-~a" #'name arg))
      #:with (constructor-arg ...) (apply
                                    append
                                    (for/list ([kwd (in-list (syntax-e #'(fld.kwd ...)))]
@@ -106,18 +109,46 @@
      #:with (accessor-id ...) (for/list ([fld (in-list (syntax-e #'(fld.id ...)))])
                                 (format-id fld "~a-~a" #'name fld))
      #'(begin
-         (struct name (fld.id ...) #:transparent
-           #:methods gen:record
-           [(define (write-record self [out (current-output-port)])
-              (do-write-record record-id self out))])
-         (define record-id
-           (record-info #f 'name name (list (record-field 'fld.id fld.ft accessor-id) ...)))
-         (sequencer-add! record-info-sequencer record-id)
+         (define-syntax (name stx-or-mode)
+           (case stx-or-mode
+             [(provide)
+              #'(combine-out name name? constructor-id fld-accessor ...)]
+             [else
+              (syntax-case stx-or-mode ()
+                [(_ arg (... ...)) #'(-name arg (... ...))]
+                [id:id #'info])]))
+         (define-values (-name name? fld-accessor ...)
+           (let ()
+             (struct name (fld.id ...)
+               #:transparent
+               #:methods gen:record
+               [(define (write-record self [out (current-output-port)])
+                  (do-write-record info self out))])
+             (values name name? fld-accessor ...)))
+         (define info
+           (let ([fields (list (record-field 'fld.id
+                                             (let ([ft fld.ft])
+                                               (if (record-info? ft)
+                                                   (Untagged ft)
+                                                   ft))
+                                             accessor-id)
+                               ...)])
+             (record-info #f 'name -name fields)))
+         (sequencer-add! record-info-sequencer info)
          (define/contract (constructor-id constructor-arg ...)
            (->* (required-ctor-arg-ctc ...)
                 (optional-ctor-arg-ctc ...)
-                id?)
-           (name fld.id ...)))]))
+                name?)
+           (-name fld.id ...)))]))
+
+(define-syntax record-out
+  (make-provide-transformer
+   (lambda (stx modes)
+     (syntax-parse stx
+      [(_ id)
+       (define export-stx
+         ((syntax-local-value #'id) 'provide))
+       (expand-export export-stx modes)]))))
 
 (module+ test
   (require racket/port
@@ -240,24 +271,31 @@
   #:write write-uvarint)
 
 (define (Listof t)
-  (define read-proc (field-type-read-proc t))
-  (define write-proc (field-type-write-proc t))
-  (define swift-type ((field-type-swift-proc t)))
-  (field-type
-   (λ (in)
-     (for/list ([_ (in-range (read-varint in))])
-       (read-proc in)))
-   (λ (vs out)
-     (write-varint (length vs) out)
-     (for-each (λ (v) (write-proc v out)) vs))
-   (λ ()
-     (format "[~a]" swift-type))))
+  (let ([t (if (record-info? t)
+               (Untagged t)
+               t)])
+    (unless (field-type? t)
+      (raise-argument-error 'Listof "(or/c field-type? record-info?)" t))
+    (define read-proc (field-type-read-proc t))
+    (define write-proc (field-type-write-proc t))
+    (define swift-type ((field-type-swift-proc t)))
+    (field-type
+     (λ (in)
+       (for/list ([_ (in-range (read-varint in))])
+         (read-proc in)))
+     (λ (vs out)
+       (write-varint (length vs) out)
+       (for-each (λ (v) (write-proc v out)) vs))
+     (λ ()
+       (format "[~a]" swift-type)))))
 
 (define-field-type Record
   #:read read-record
   #:write write-record)
 
 (define (Untagged t)
+  (unless (record-info? t)
+    (raise-argument-error 'Untagged "record-info?" t))
   (field-type
    (λ (in) (do-read-record-fileds t in))
    (λ (v out) (do-write-record-fields t v out))
@@ -280,7 +318,7 @@
       [title String string?]
       [comments (Listof UVarint) (listof exact-integer?)])
     (define-record Stories
-      [stories (Listof (Untagged record:Story)) (listof Story?)])
+      [stories (Listof Story) (listof Story?)])
     (define v
       (Stories
        (list (Story 0 "a" null)
@@ -292,7 +330,7 @@
     (define-record A
       [s String])
     (define-record B
-      [a (Untagged record:A)])
+      [a A])
     (define v
       (B (A "test")))
     (define bs (with-output-to-bytes (λ () (write-field Record v))))

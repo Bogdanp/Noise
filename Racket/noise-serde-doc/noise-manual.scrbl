@@ -31,13 +31,43 @@ and Racket.  In both languages, they are represented by structs.  Use
 the @tt{raco} command @tt{noise-serde-codegen} to generate Swift
 definitions for records reachable from a given root module.
 
-@defproc[(record? [v any/c]) boolean?]{
-  Returns @racket[#t] when @racket[v] is a @tech{record}.
+@defform[(define-record name
+           field ...)
+         #:grammar ([field [field-id field-type]
+                           [field-id field-type field-ctc-expr]
+                           [(field-id default-expr) field-type]
+                           [(field-id default-expr) field-type field-ctc-expr]])
+         #:contracts ([field-type (or/c field-type? record-info?)])]{
+
+  Defines a record called @racket[name] with the given set of
+  @racket[field]s.  Records are backed by structs and generate smart
+  constructors that take a keyword argument for every field.  Smart
+  constructors are named by prepending @tt{make-} to the record name
+  and bound at phase level 0.
+
+  @examples[
+    #:eval ev
+    (define-record Human
+     [name String string?]
+     [age UVarint (integer-in 0 125)])
+    (make-Human
+     #:name "Bogdan"
+     #:age 30)
+    Human
+  ]
+}
+
+@defform[(record-out id)]{
+  Exports the bindings associated with a record @racket[id].
 }
 
 @defproc[(record-info? [v any/c]) boolean?]{
   Returns @racket[#t] when @racket[v] is a value containing runtime
   information about a @tech{record}.
+}
+
+@defproc[(record? [v any/c]) boolean?]{
+  Returns @racket[#t] when @racket[v] is an instance of a @tech{record}.
 }
 
 @defproc[(read-record [in input-port? (current-input-port)]) any/c]{
@@ -48,37 +78,6 @@ definitions for records reachable from a given root module.
                        [out output-port? (current-output-port)]) void?]{
   Writes @racket[r] to @racket[out].  Raises a contract error if
   @racket[r] is not an instance of a @tech{record}.
-}
-
-@defform[(define-record name
-           field ...)
-         #:grammar ([field [field-id field-type]
-                           [field-id field-type field-ctc-expr]
-                           [(field-id default-expr) field-type]
-                           [(field-id default-expr) field-type field-ctc-expr]])
-         #:contracts ([field-type field-type?])]{
-
-  Defines a record called @racket[name] with the given set of
-  @racket[field]s.  Records are backed by structs and generate smart
-  constructors that take a keyword argument for every field.  Smart
-  constructors are named by prepending @tt{make-} to the record name
-  and bound at phase level 0.
-
-  Opaque information about each record type is bound at phase level 0
-  to a variable named by prepending @tt{record:} to the record name.
-  Every record gets assigned a globally-unique identifier.  The GUIDs
-  are issued in definition order.
-
-  @examples[
-    #:eval ev
-    (define-record Human
-     [name String string?]
-     [age UVarint (integer-in 0 125)])
-    (make-Human
-     #:name "Bogdan"
-     #:age 30)
-    record:Human
-  ]
 }
 
 @subsection{Field Types}
@@ -107,10 +106,12 @@ deserialized.
   @tt{UInt64} and @tt{Int64}, respectively.
 }
 
-@defproc[(Listof [t field-type?]) field-type?]{
-  A constructor for @tech{field types} that represent a list of values
-  of type @racket[t].  In Swift, these values are represented by
-  arrays of the subtype.
+@defproc[(Listof [t (or/c field-type? record-info?)]) field-type?]{
+  A constructor for @tech{field types} that represent lists composed
+  of @racket[field-type] values.  In Swift, these values are
+  represented by arrays of the subtype.  When @racket[t] is a
+  @racket[record-info?] value, it is converted to an @racket[Untagged]
+  field.
 }
 
 @defthing[Record field-type?]{
@@ -129,6 +130,33 @@ deserialized.
 @section[#:tag "backends"]{Backends}
 @defmodule[noise/backend]
 
+@deftogether[(
+  @defidform[:]
+  @defform[
+    #:literals (:)
+    (define-rpc (id arg ... : response-type-expr)
+      body ...+)
+    #:grammar [(arg [arg-label arg-id : arg-type-expr])]
+    #:contracts ([arg-type-expr (or/c field-type? record-info?)]
+                 [response-type-expr (or/c field-type? record-info?)])
+  ]
+)]{
+  Defines a procedure named @racket[id] and registers an RPC handler
+  for it in the global handler registry.
+
+  The @tt{noise-serde-codegen} command automatically generates Swift
+  code to handle calling these procedures.  In Swift, the RPC
+  @racket[id], @racket[arg-label]s and @racket[arg-id]s are converted
+  to camel case.  The @racket[arg-label]s have no meaning in Racket.
+
+  @examples[
+    #:eval ev
+    (define-rpc (get-human-name [of h : Human] : String)
+      (Human-name h))
+    (get-human-name (make-Human #:name "Bogdan" #:age 30))
+  ]
+}
+
 @defproc[(serve [in-fd exact-integer?]
                 [out-fd exact-integer?]) (-> void?)]{
 
@@ -140,33 +168,4 @@ deserialized.
   and multiple requests may be handled concurrently.
 
   Returns a procedure that stops the server when applied.
-}
-
-@defform[
-  #:literals (:)
-  (define-rpc (id arg ... : response-type-expr)
-    body ...+)
-  #:grammar [(arg [arg-label arg-id : arg-type-expr])]
-  #:contracts ([arg-type-expr field-type?]
-               [response-type-expr field-type?])
-]{
-  Defines a procedure named @racket[id] and registers an RPC handler
-  for it in the global handler registry.
-
-  The @tt{noise-serde-codegen} command automatically generates Swift
-  code to handle calling these procedures.  In Swift, the RPC
-  @racket[id], @racket[arg-label]s and @racket[arg-id]s are converted
-  to camel case.  The @racket[arg-label]s have no meaning in Racket.
-
-  @examples[
-    #:eval ev
-    (define-rpc (get-human-name [of h : record:Human] : String)
-      (Human-name h))
-    (get-human-name (make-Human #:name "Bogdan" #:age 30))
-  ]
-}
-
-@defidform[:]{
-  Within a @racket[define-rpc] form, this identifier is used to
-  declare the type of an argument or response type.
 }

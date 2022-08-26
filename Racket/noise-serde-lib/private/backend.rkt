@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require (for-syntax racket/base
-                     racket/syntax-srcloc
                      syntax/parse)
          "sequencer.rkt"
          "serde.rkt")
@@ -31,9 +30,6 @@
 (define-syntax (: stx)
   (raise-syntax-error ': "may only be used within a define-rpc form" stx))
 
-(define-syntax known-names
-  (make-hasheq))
-
 (begin-for-syntax
   (define (valid-name? id-stx)
     (define id-str (symbol->string (syntax-e id-stx)))
@@ -52,15 +48,6 @@
      "RPC names may only contain alphanumeric characters, dashes and underscores"
      #:fail-unless (andmap valid-name? (syntax-e #'(arg.name ...)))
      "RPC labels may only contain alphanumeric characters, dashes and underscores"
-     (define name-sym (syntax-e #'name))
-     (define known-names (syntax-local-value #'known-names))
-     (when (hash-has-key? known-names name-sym)
-       (define other-stx (hash-ref known-names name-sym))
-       (define other-loc (srcloc->string (syntax-srcloc other-stx)))
-       (define other-message (format "~n  existing definition: ~a" other-loc))
-       (define message (format "cannot redefine RPC ~a" name-sym))
-       (raise-syntax-error 'define-rpc message stx #'name null other-message))
-     (hash-set! known-names name-sym stx)
      #'(begin
          (define response-type (normalize type))
          (unless (field-type? response-type)

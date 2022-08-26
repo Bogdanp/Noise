@@ -2,9 +2,10 @@
 
 (require "private/serde.rkt")
 (provide
+ define-record
+ record-out
  record?
  record-info?
- define-record
  read-record
  write-record
 
