@@ -33,6 +33,16 @@ public class Future<T> {
     return fut
   }
 
+  /// Runs `proc` on `queue` with the future's result once ready.
+  public func onComplete(queue: DispatchQueue = DispatchQueue.main, _ proc: @escaping (T) -> Void) {
+    DispatchQueue.global(qos: .default).async {
+      let res = self.wait()
+      queue.async {
+        proc(res)
+      }
+    }
+  }
+
   /// Block the current thread until data is available.
   public func wait() -> T {
     mu.wait()
