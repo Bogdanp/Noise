@@ -136,7 +136,7 @@
   (fprintf out "    return ~a(~n" name)
   (for ([(f idx) (in-indexed (in-list fields))])
     (define last? (= idx (sub1 len)))
-    (define maybe-comma (if last? "" ", "))
+    (define maybe-comma (if last? "" ","))
     (define id (record-field-id f))
     (define type (swift-type (record-field-type f)))
     (fprintf out "      ~a: ~a.read(from: inp, using: &buf)!~a~n" id type maybe-comma))
@@ -155,5 +155,6 @@
   (require racket/cmdline)
   (command-line
    #:args [modpath]
-   (dynamic-require modpath #f))
+   (parameterize ([current-output-port (current-error-port)])
+     (dynamic-require modpath #f)))
   (write-Swift-code))
