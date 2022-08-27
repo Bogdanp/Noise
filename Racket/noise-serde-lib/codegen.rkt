@@ -47,6 +47,7 @@
           ""))
     (fprintf out " ~a case ~a(~a)~n" maybe-indirect (~case name) name))
 
+  (fprintf out "~n")
   (fprintf out "  public static func read(from inp: InputPort, using buf: inout Data) -> Record? {~n")
   (fprintf out "    guard let id = UVarint.read(from: inp, using: &buf) else {~n")
   (fprintf out "      return nil~n")
@@ -62,6 +63,7 @@
   (fprintf out "    }~n")
   (fprintf out "  }~n")
 
+  (fprintf out "~n")
   (fprintf out "  public func write(to out: OutputPort) {~n")
   (fprintf out "    switch self {~n")
   (for ([id (in-list sorted-record-ids)])
@@ -74,10 +76,12 @@
 
   (for ([id (in-list sorted-record-ids)])
     (define r (hash-ref record-infos id))
+    (fprintf out "~n")
     (write-record-code r out))
 
+  (fprintf out "~n")
   (fprintf out "public class Backend {~n")
-  (fprintf out "  let impl: NoiseBackend.Backend!~n")
+  (fprintf out "  let impl: NoiseBackend.Backend!~n~n")
   (fprintf out "  init(withZo zo: URL, andMod mod: String, andProc proc: String) {~n")
   (fprintf out "    impl = NoiseBackend.Backend(withZo: zo, andMod: mod, andProc: proc)~n")
   (fprintf out "  }~n")
@@ -94,6 +98,7 @@
                  (~camel-case name)
                  (swift-type type)))
        ", "))
+    (fprintf out "~n")
     (fprintf out "  public func ~a(~a) -> Future<~a> {~n" (~camel-case name) args-str (swift-type type))
     (fprintf out "    return impl.send(~n")
     (fprintf out "      writeProc: { (out: OutputPort) in~n")
@@ -118,6 +123,7 @@
              (~camel-case (record-field-id f))
              (swift-type (record-field-type f))))
 
+  (fprintf out "~n")
   (fprintf out "  public init(~n")
   (define len (length fields))
   (for ([(f idx) (in-indexed (in-list fields))])
@@ -133,6 +139,7 @@
     (fprintf out "    self.~a = ~a~n" camel-id camel-id))
   (fprintf out "  }~n")
 
+  (fprintf out "~n")
   (fprintf out "  public static func read(from inp: InputPort, using buf: inout Data) -> ~a? {~n" name)
   (fprintf out "    return ~a(~n" name)
   (for ([(f idx) (in-indexed (in-list fields))])
@@ -145,6 +152,7 @@
   (fprintf out "    )~n")
   (fprintf out "  }~n")
 
+  (fprintf out "~n")
   (fprintf out "  public func write(to out: OutputPort) {~n")
   (fprintf out "    UVarint(~a).write(to: out)~n" (~hex id))
   (for ([f (in-list fields)])
