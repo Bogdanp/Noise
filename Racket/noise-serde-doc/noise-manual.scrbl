@@ -45,6 +45,8 @@ definitions for records reachable from a given root module.
   constructors are named by prepending @tt{make-} to the record name
   and bound at phase level 0.
 
+  Record @racket[name]s must be unique across all modules.
+
   @examples[
     #:eval ev
     (define-record Human
@@ -122,8 +124,8 @@ deserialized.
 
 @defthing[Record field-type?]{
   A @tech{field type} that serializes record values by tagging them
-  with their globally-unique id.  In Swift, these values are
-  represented by the @tt{Record} enum.
+  with their unique id.  In Swift, these values are represented by the
+  @tt{Record} enum.
 }
 
 @defproc[(Untagged [ri record-info?]) field-type?]{
@@ -135,6 +137,10 @@ deserialized.
 
 @section[#:tag "backends"]{Backends}
 @defmodule[noise/backend]
+
+The @racketmodname[noise/backend] module has an internal
+@deftech{handler registry} that is used to map remote procedure call
+ids to handler procedures.
 
 @deftogether[(
   @defidform[:]
@@ -148,12 +154,14 @@ deserialized.
   ]
 )]{
   Defines a procedure named @racket[id] and registers an RPC handler
-  for it in the global handler registry.
+  for it in the @tech{handler registry}.
 
   The @tt{noise-serde-codegen} command automatically generates Swift
   code to handle calling these procedures.  In Swift, the RPC
   @racket[id], @racket[arg-label]s and @racket[arg-id]s are converted
   to camel case.  The @racket[arg-label]s have no meaning in Racket.
+
+  RPC @racket[id]s must be unique across all modules.
 
   @examples[
     #:eval ev
@@ -170,8 +178,8 @@ deserialized.
   @racket[out-fd] to an input port and an output port, respectively,
   then spawns a thread that reads requests from the input port in the
   form of @tech{records}.  Request handlers are defined using
-  @racket[define-rpc].  Request handlers are run in their own threads
-  and multiple requests may be handled concurrently.
+  @racket[define-rpc].  Handlers are run in their own threads and
+  multiple requests may be handled concurrently.
 
   Returns a procedure that stops the server when applied.
 }
