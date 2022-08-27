@@ -92,18 +92,24 @@ deserialized.
 @deftogether[(
   @defthing[Bool field-type?]
   @defthing[Bytes field-type?]
+  @defthing[Float32 field-type?]
+  @defthing[Float64 field-type?]
+  @defthing[Int16 field-type?]
+  @defthing[Int32 field-type?]
+  @defthing[Varint field-type?]
+  @defthing[UInt16 field-type?]
+  @defthing[UInt32 field-type?]
+  @defthing[UVarint field-type?]
   @defthing[String field-type?]
   @defthing[Symbol field-type?]
-  @defthing[UVarint field-type?]
-  @defthing[Varint field-type?]
 )]{
 
   @tech{Field types} for primitive values.
 
-  The @racket[UVarint] and @racket[Varint] field types serialize
-  unsigned and signed integer values, respectively, using a
+  The @racket[Varint] and @racket[UVarint] field types serialize
+  signed and unsigned integer values, respectively, using a
   variable-length encoding.  In Swift, these values are represented by
-  @tt{UInt64} and @tt{Int64}, respectively.
+  @tt{Int64} and @tt{UInt64}.
 }
 
 @defproc[(Listof [t (or/c field-type? record-info?)]) field-type?]{

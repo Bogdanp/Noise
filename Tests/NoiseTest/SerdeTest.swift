@@ -17,6 +17,32 @@ class SerdeTests: XCTestCase {
     }
   }
 
+  func testFloat64Roundtrip() {
+    let p = Pipe()
+    let inp = InputPort(withHandle: p.fileHandleForReading)
+    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let tests: [Float64] = [0, 0.5, 1.25, -5.0]
+    var buf = Data(count: 8192)
+    for n in tests {
+      n.write(to: out)
+      out.flush()
+      XCTAssertEqual(n, Float64.read(from: inp, using: &buf))
+    }
+  }
+
+  func testInt32Roundtrip() {
+    let p = Pipe()
+    let inp = InputPort(withHandle: p.fileHandleForReading)
+    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let tests: [Int32] = [0, 0xFF, -0xFF, 0x7FFFFFFF, -0x7FFFFFFF]
+    var buf = Data(count: 8192)
+    for n in tests {
+      n.write(to: out)
+      out.flush()
+      XCTAssertEqual(n, Int32.read(from: inp, using: &buf))
+    }
+  }
+
   func testVarintRoundtrip() {
     let p = Pipe()
     let inp = InputPort(withHandle: p.fileHandleForReading)

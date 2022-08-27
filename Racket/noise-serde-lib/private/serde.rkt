@@ -249,6 +249,32 @@
             (write-bytes bs out))
   #:swift (λ () "Data"))
 
+(define-syntax (define-float-field-type stx)
+  (syntax-parse stx
+    [(_ id:id size:number)
+     #'(define-field-type id
+         #:read (λ (in) (floating-point-bytes->real (read-bytes size in) #t))
+         #:write (λ (n out) (write-bytes (real->floating-point-bytes n size #t) out)))]))
+
+(define-float-field-type Float32 4)
+(define-float-field-type Float64 8)
+
+(define-syntax (define-integer-field-type stx)
+  (syntax-parse stx
+    [(_ id:id size:number)
+     #'(define-integer-field-type id size #f)]
+    [(_ id:id size:number #:signed)
+     #'(define-integer-field-type id size #t)]
+    [(_ id:id size:number signed?:expr)
+     #'(define-field-type id
+         #:read (λ (in) (integer-bytes->integer (read-bytes size in) signed? #t))
+         #:write (λ (n out) (write-bytes (integer->integer-bytes n size signed? #t) out)))]))
+
+(define-integer-field-type Int16 2 #:signed)
+(define-integer-field-type Int32 4 #:signed)
+(define-integer-field-type UInt16 2)
+(define-integer-field-type UInt32 4)
+
 (define-field-type String
   #:read (λ (in)
            (bytes->string/utf-8 (read-bytes (read-varint in) in)))

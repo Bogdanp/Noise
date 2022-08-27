@@ -1,12 +1,12 @@
 import Foundation
 
 /// The protocol for readable serde values.
-public protocol Readable where Self: Equatable {
+public protocol Readable {
   static func read(from inp: InputPort, using buf: inout Data) -> Self?
 }
 
 /// The protocol for writable serde values.
-public protocol Writable where Self: Equatable {
+public protocol Writable {
   func write(to out: OutputPort)
 }
 
@@ -40,6 +40,124 @@ extension Data: Readable, Writable {
   public func write(to out: OutputPort) {
     Varint(count).write(to: out)
     out.write(contentsOf: self)
+  }
+}
+
+extension Float32: Readable, Writable {
+  public static func read(from inp: InputPort, using buf: inout Data) -> Float32? {
+    guard let b0 = inp.readByte() else { return nil }
+    guard let b1 = inp.readByte() else { return nil }
+    guard let b2 = inp.readByte() else { return nil }
+    guard let b3 = inp.readByte() else { return nil }
+    return Float32(bitPattern: (
+      UInt32(b0) << 24 |
+      UInt32(b1) << 16 |
+      UInt32(b2) << 8  |
+      UInt32(b3)
+    ))
+  }
+
+  public func write(to out: OutputPort) {
+    let bits = self.bitPattern
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 24 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 16 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 8  & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits       & 0xFF))
+  }
+}
+
+extension Float64: Readable, Writable {
+  public static func read(from inp: InputPort, using buf: inout Data) -> Float64? {
+    guard let b0 = inp.readByte() else { return nil }
+    guard let b1 = inp.readByte() else { return nil }
+    guard let b2 = inp.readByte() else { return nil }
+    guard let b3 = inp.readByte() else { return nil }
+    guard let b4 = inp.readByte() else { return nil }
+    guard let b5 = inp.readByte() else { return nil }
+    guard let b6 = inp.readByte() else { return nil }
+    guard let b7 = inp.readByte() else { return nil }
+    return Float64(bitPattern: (
+      UInt64(b0) << 56 |
+      UInt64(b1) << 48 |
+      UInt64(b2) << 40 |
+      UInt64(b3) << 32 |
+      UInt64(b4) << 24 |
+      UInt64(b5) << 16 |
+      UInt64(b6) << 8  |
+      UInt64(b7)
+    ))
+  }
+
+  public func write(to out: OutputPort) {
+    let bits = self.bitPattern
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 56 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 48 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 40 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 32 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 24 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 16 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits >> 8  & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: bits       & 0xFF))
+  }
+}
+
+extension Int16: Readable, Writable {
+  public static func read(from inp: InputPort, using buf: inout Data) -> Int16? {
+    guard let b0 = inp.readByte() else { return nil }
+    guard let b1 = inp.readByte() else { return nil }
+    return Int16(bitPattern: UInt16(b0) << 8 | UInt16(b1))
+  }
+
+  public func write(to out: OutputPort) {
+    out.writeByte(UInt8(truncatingIfNeeded: self >> 8 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: self      & 0xFF))
+  }
+}
+
+extension Int32: Readable, Writable {
+  public static func read(from inp: InputPort, using buf: inout Data) -> Int32? {
+    guard let b0 = inp.readByte() else { return nil }
+    guard let b1 = inp.readByte() else { return nil }
+    guard let b2 = inp.readByte() else { return nil }
+    guard let b3 = inp.readByte() else { return nil }
+    return Int32(bitPattern: UInt32(b0) << 24 | UInt32(b1) << 16 | UInt32(b2) << 8 | UInt32(b3))
+  }
+
+  public func write(to out: OutputPort) {
+    out.writeByte(UInt8(truncatingIfNeeded: self >> 24 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: self >> 16 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: self >> 8  & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: self       & 0xFF))
+  }
+}
+
+extension UInt16: Readable, Writable {
+  public static func read(from inp: InputPort, using buf: inout Data) -> UInt16? {
+    guard let b0 = inp.readByte() else { return nil }
+    guard let b1 = inp.readByte() else { return nil }
+    return UInt16(bigEndian: UInt16(b0) << 8 | UInt16(b1))
+  }
+
+  public func write(to out: OutputPort) {
+    out.writeByte(UInt8(truncatingIfNeeded: self >> 8 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: self      & 0xFF))
+  }
+}
+
+extension UInt32: Readable, Writable {
+  public static func read(from inp: InputPort, using buf: inout Data) -> UInt32? {
+    guard let b0 = inp.readByte() else { return nil }
+    guard let b1 = inp.readByte() else { return nil }
+    guard let b2 = inp.readByte() else { return nil }
+    guard let b3 = inp.readByte() else { return nil }
+    return UInt32(bigEndian: UInt32(b0) << 24 | UInt32(b1) << 16 | UInt32(b2) << 8 | UInt32(b3))
+  }
+
+  public func write(to out: OutputPort) {
+    out.writeByte(UInt8(truncatingIfNeeded: self >> 24 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: self >> 16 & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: self >> 8  & 0xFF))
+    out.writeByte(UInt8(truncatingIfNeeded: self       & 0xFF))
   }
 }
 
