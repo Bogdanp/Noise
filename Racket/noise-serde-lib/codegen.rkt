@@ -115,7 +115,7 @@
   (for ([f (in-list fields)])
     (fprintf out
              "  public let ~a: ~a~n"
-             (record-field-id f)
+             (~camel-case (record-field-id f))
              (swift-type (record-field-type f))))
 
   (fprintf out "  public init(~n")
@@ -125,11 +125,12 @@
     (define maybe-comma (if last? "" ","))
     (define id (record-field-id f))
     (define type (swift-type (record-field-type f)))
-    (fprintf out "    ~a: ~a~a~n" id type maybe-comma))
+    (fprintf out "    ~a: ~a~a~n" (~camel-case id) type maybe-comma))
   (fprintf out "  ) {~n")
   (for ([f (in-list fields)])
     (define id (record-field-id f))
-    (fprintf out "    self.~a = ~a~n" id id))
+    (define camel-id (~camel-case id))
+    (fprintf out "    self.~a = ~a~n" camel-id camel-id))
   (fprintf out "  }~n")
 
   (fprintf out "  public static func read(from inp: InputPort, using buf: inout Data) -> ~a? {~n" name)
@@ -138,15 +139,17 @@
     (define last? (= idx (sub1 len)))
     (define maybe-comma (if last? "" ","))
     (define id (record-field-id f))
+    (define camel-id (~camel-case id))
     (define type (swift-type (record-field-type f)))
-    (fprintf out "      ~a: ~a.read(from: inp, using: &buf)!~a~n" id type maybe-comma))
+    (fprintf out "      ~a: ~a.read(from: inp, using: &buf)!~a~n" camel-id type maybe-comma))
   (fprintf out "    )~n")
   (fprintf out "  }~n")
 
   (fprintf out "  public func write(to out: OutputPort) {~n")
   (fprintf out "    UVarint(~a).write(to: out)~n" (~hex id))
   (for ([f (in-list fields)])
-    (fprintf out "    ~a.write(to: out)~n" (record-field-id f)))
+    (define camel-id (~camel-case (record-field-id f)))
+    (fprintf out "    ~a.write(to: out)~n" camel-id))
   (fprintf out "  }~n")
 
   (fprintf out "}~n"))
