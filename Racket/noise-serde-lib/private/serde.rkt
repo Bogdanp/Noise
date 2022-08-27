@@ -47,7 +47,8 @@
  (struct-out record-info)
  (struct-out record-field))
 
-(struct record-info ([id #:mutable] name constructor fields))
+(struct record-info ([id #:mutable] name constructor fields)
+  #:property prop:procedure (struct-field-index constructor))
 (struct record-field (id type accessor))
 
 (define record-infos (make-hasheqv))
@@ -85,8 +86,10 @@
     [(_ name:id fld:record-field ...)
      #:with name? (format-id #'name "~a?" #'name)
      #:with constructor-id (format-id #'name "make-~a" #'name)
-     #:with (fld-accessor ...) (for/list ([arg (in-list (syntax-e #'(fld.id ...)))])
-                                 (format-id #'name "~a-~a" #'name arg))
+     #:with (fld-accessor-id ...) (for/list ([arg (in-list (syntax-e #'(fld.id ...)))])
+                                    (format-id #'name "~a-~a" #'name arg))
+     #:with (fld-setter-id ...) (for/list ([arg (in-list (syntax-e #'(fld.id ...)))])
+                                  (format-id #'name "set-~a-~a" #'name arg))
      #:with (constructor-arg ...) (apply
                                    append
                                    (for/list ([kwd (in-list (syntax-e #'(fld.kwd ...)))]
@@ -106,32 +109,33 @@
                                                     [ctc  (in-list (syntax-e #'(fld.ctc ...)))]
                                                     #:when opt?)
                                            (list kwd ctc)))
-     #:with (accessor-id ...) (for/list ([fld (in-list (syntax-e #'(fld.id ...)))])
-                                (format-id fld "~a-~a" #'name fld))
      #'(begin
          (define-syntax (name stx-or-mode)
            (case stx-or-mode
              [(provide)
-              #'(combine-out name name? constructor-id fld-accessor ...)]
+              #'(combine-out name name? constructor-id fld-accessor-id ... fld-setter-id ...)]
              [else
               (syntax-case stx-or-mode ()
                 [(_ arg (... ...)) #'(-name arg (... ...))]
                 [id:id #'info])]))
-         (define-values (-name name? fld-accessor ...)
+         (define-values (-name name? fld-accessor-id ... fld-setter-id ...)
            (let ()
              (struct name (fld.id ...)
                #:transparent
                #:methods gen:record
                [(define (write-record self [out (current-output-port)])
                   (do-write-record info self out))])
-             (values name name? fld-accessor ...)))
+             (define/contract (fld-setter-id r v)
+               (-> name? fld.ctc name?)
+               (struct-copy name r [fld.id v])) ...
+             (values name name? fld-accessor-id ... fld-setter-id ...)))
          (define info
            (let ([fields (list (record-field 'fld.id
                                              (let ([ft fld.ft])
                                                (if (record-info? ft)
                                                    (Untagged ft)
                                                    ft))
-                                             accessor-id)
+                                             fld-accessor-id)
                                ...)])
              (record-info #f 'name -name fields)))
          (sequencer-add! record-info-sequencer info)
@@ -145,10 +149,10 @@
   (make-provide-transformer
    (lambda (stx modes)
      (syntax-parse stx
-      [(_ id)
-       (define export-stx
-         ((syntax-local-value #'id) 'provide))
-       (expand-export export-stx modes)]))))
+       [(_ id)
+        (define export-stx
+          ((syntax-local-value #'id) 'provide))
+        (expand-export export-stx modes)]))))
 
 (module+ test
   (require racket/port
