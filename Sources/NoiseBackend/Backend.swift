@@ -7,6 +7,8 @@ import NoiseSerde
 public struct BackendStats {
   public let totalRequests: UInt64
   public let totalWaitNanos: UInt64
+  public let totalReadNanos: UInt64
+  public let totalWriteNanos: UInt64
 }
 
 /// Client implementation for an async Racket backend.
@@ -20,6 +22,8 @@ public class Backend {
   fileprivate var pending = [UInt64: ResponseHandler]()
   private var totalRequests = UInt64(0)
   private var totalWaitNanos = UInt64(0)
+  private var totalReadNanos = UInt64(0)
+  private var totalWriteNanos = UInt64(0)
 
   public init(withZo zo: URL, andMod mod: String, andProc proc: String) {
     out = OutputPort(withHandle: ip.fileHandleForWriting)
@@ -56,11 +60,12 @@ public class Backend {
         continue
       }
       mu.signal()
-      handler.handle(from: inp, using: &buf)
+      let dt = handler.handle(from: inp, using: &buf)
       mu.wait()
       pending.removeValue(forKey: id)
       totalRequests += 1
       totalWaitNanos += DispatchTime.now().uptimeNanoseconds - handler.time.uptimeNanoseconds
+      totalReadNanos += dt
       mu.signal()
     }
   }
@@ -72,12 +77,15 @@ public class Backend {
     mu.wait()
     let id = seq
     seq += 1
+    let t0 = DispatchTime.now()
     id.write(to: out)
     write(out)
     out.flush()
+    let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
     let fut = Future<T>()
     let handler = ResponseHandlerImpl<T>(id: id, fut: fut, read: read)
     pending[id] = handler
+    totalWriteNanos += dt
     mu.signal()
     return fut
   }
@@ -87,7 +95,9 @@ public class Backend {
     defer { mu.signal() }
     return BackendStats(
       totalRequests: totalRequests,
-      totalWaitNanos: totalWaitNanos
+      totalWaitNanos: totalWaitNanos,
+      totalReadNanos: totalReadNanos,
+      totalWriteNanos: totalWriteNanos
     )
   }
 }
@@ -105,7 +115,7 @@ fileprivate struct Request<Data: Writable>: Writable {
 fileprivate protocol ResponseHandler {
   var time: DispatchTime { get }
 
-  func handle(from inp: InputPort, using buf: inout Data)
+  func handle(from inp: InputPort, using buf: inout Data) -> UInt64
 }
 
 fileprivate struct ResponseHandlerImpl<T>: ResponseHandler {
@@ -114,7 +124,11 @@ fileprivate struct ResponseHandlerImpl<T>: ResponseHandler {
   let read: (InputPort, inout Data) -> T
   let time = DispatchTime.now()
 
-  func handle(from inp: InputPort, using buf: inout Data) {
-    fut.resolve(with: read(inp, &buf))
+  func handle(from inp: InputPort, using buf: inout Data) -> UInt64 {
+    let t0 = DispatchTime.now()
+    let data = read(inp, &buf)
+    let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
+    fut.resolve(with: data)
+    return dt
   }
 }
