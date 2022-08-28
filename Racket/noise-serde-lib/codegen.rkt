@@ -69,7 +69,9 @@
   (for ([id (in-list sorted-record-ids)])
     (define r (hash-ref record-infos id))
     (define name (record-info-name r))
-    (fprintf out "    case .~a(let r): r.write(to: out)~n" (~case name)))
+    (fprintf out "    case .~a(let r):~n" (~case name))
+    (fprintf out "      UVarint(~a).write(to: out)~n" (~hex id))
+    (fprintf out "      r.write(to: out)~n"))
   (fprintf out "    }~n")
   (fprintf out "  }~n")
   (fprintf out "}~n")
@@ -154,7 +156,6 @@
 
   (fprintf out "~n")
   (fprintf out "  public func write(to out: OutputPort) {~n")
-  (fprintf out "    UVarint(~a).write(to: out)~n" (~hex id))
   (for ([f (in-list fields)])
     (define camel-id (~camel-case (record-field-id f)))
     (fprintf out "    ~a.write(to: out)~n" camel-id))
