@@ -49,11 +49,10 @@ public class InputPort {
   }
 
   /// Reads a single byte from the handle, returning `nil` on EOF.
-  public func readByte() -> UInt8? {
-    more()
-    if cnt == 0 {
-      return nil
-    }
+  public func readByte() -> UInt8 {
+    repeat {
+      more()
+    } while (cnt == 0)
     let res = buf[idx]
     idx += 1
     return res

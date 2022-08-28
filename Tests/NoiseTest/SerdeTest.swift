@@ -80,7 +80,7 @@ class SerdeTests: XCTestCase {
     var buf = Data(count: 8192)
     data.write(to: out)
     out.flush()
-    let res = [String].read(from: inp, using: &buf)!
+    let res = [String].read(from: inp, using: &buf)
     XCTAssertEqual(data, res)
   }
 

@@ -51,9 +51,7 @@ public class Backend {
     let inp = InputPort(withHandle: op.fileHandleForReading)
     var buf = Data(count: 8*1024) // will grow as needed
     while true {
-      guard let id = UVarint.read(from: inp, using: &buf) else {
-        preconditionFailure("failed to read response id")
-      }
+      let id = UVarint.read(from: inp, using: &buf)
       mu.wait()
       guard let handler = pending[id] else{
         mu.signal()

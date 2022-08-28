@@ -2,7 +2,7 @@ import Foundation
 
 /// The protocol for readable serde values.
 public protocol Readable {
-  static func read(from inp: InputPort, using buf: inout Data) -> Self?
+  static func read(from inp: InputPort, using buf: inout Data) -> Self
 }
 
 /// The protocol for writable serde values.
@@ -11,7 +11,7 @@ public protocol Writable {
 }
 
 extension Bool: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> Bool? {
+  public static func read(from inp: InputPort, using buf: inout Data) -> Bool {
     return inp.readByte() == 1
   }
 
@@ -21,18 +21,17 @@ extension Bool: Readable, Writable {
 }
 
 extension Data: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> Data? {
-    guard let vlen = Varint.read(from: inp, using: &buf) else {
-      return nil
-    }
+  public static func read(from inp: InputPort, using buf: inout Data) -> Data {
+    let vlen = Varint.read(from: inp, using: &buf)
     assert(vlen >= 0)
     if vlen == 0 {
       return Data(count: 0)
     }
     let len = Int(vlen)
     buf.grow(upTo: len)
-    if inp.read(&buf, count: len) < len {
-      return nil
+    let nread = inp.read(&buf, count: len)
+    if nread < len {
+      preconditionFailure("Data: received \(nread) bytes but expected \(len)")
     }
     return buf[0..<len]
   }
@@ -44,16 +43,12 @@ extension Data: Readable, Writable {
 }
 
 extension Float32: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> Float32? {
-    guard let b0 = inp.readByte() else { return nil }
-    guard let b1 = inp.readByte() else { return nil }
-    guard let b2 = inp.readByte() else { return nil }
-    guard let b3 = inp.readByte() else { return nil }
+  public static func read(from inp: InputPort, using buf: inout Data) -> Float32 {
     return Float32(bitPattern: (
-      UInt32(b0) << 24 |
-      UInt32(b1) << 16 |
-      UInt32(b2) << 8  |
-      UInt32(b3)
+      UInt32(inp.readByte()) << 24 |
+      UInt32(inp.readByte()) << 16 |
+      UInt32(inp.readByte()) << 8  |
+      UInt32(inp.readByte())
     ))
   }
 
@@ -67,24 +62,16 @@ extension Float32: Readable, Writable {
 }
 
 extension Float64: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> Float64? {
-    guard let b0 = inp.readByte() else { return nil }
-    guard let b1 = inp.readByte() else { return nil }
-    guard let b2 = inp.readByte() else { return nil }
-    guard let b3 = inp.readByte() else { return nil }
-    guard let b4 = inp.readByte() else { return nil }
-    guard let b5 = inp.readByte() else { return nil }
-    guard let b6 = inp.readByte() else { return nil }
-    guard let b7 = inp.readByte() else { return nil }
+  public static func read(from inp: InputPort, using buf: inout Data) -> Float64 {
     return Float64(bitPattern: (
-      UInt64(b0) << 56 |
-      UInt64(b1) << 48 |
-      UInt64(b2) << 40 |
-      UInt64(b3) << 32 |
-      UInt64(b4) << 24 |
-      UInt64(b5) << 16 |
-      UInt64(b6) << 8  |
-      UInt64(b7)
+      UInt64(inp.readByte()) << 56 |
+      UInt64(inp.readByte()) << 48 |
+      UInt64(inp.readByte()) << 40 |
+      UInt64(inp.readByte()) << 32 |
+      UInt64(inp.readByte()) << 24 |
+      UInt64(inp.readByte()) << 16 |
+      UInt64(inp.readByte()) << 8  |
+      UInt64(inp.readByte())
     ))
   }
 
@@ -102,10 +89,11 @@ extension Float64: Readable, Writable {
 }
 
 extension Int16: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> Int16? {
-    guard let b0 = inp.readByte() else { return nil }
-    guard let b1 = inp.readByte() else { return nil }
-    return Int16(bitPattern: UInt16(b0) << 8 | UInt16(b1))
+  public static func read(from inp: InputPort, using buf: inout Data) -> Int16 {
+    return Int16(bitPattern: (
+      UInt16(inp.readByte()) << 8 |
+      UInt16(inp.readByte())
+    ))
   }
 
   public func write(to out: OutputPort) {
@@ -115,12 +103,13 @@ extension Int16: Readable, Writable {
 }
 
 extension Int32: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> Int32? {
-    guard let b0 = inp.readByte() else { return nil }
-    guard let b1 = inp.readByte() else { return nil }
-    guard let b2 = inp.readByte() else { return nil }
-    guard let b3 = inp.readByte() else { return nil }
-    return Int32(bitPattern: UInt32(b0) << 24 | UInt32(b1) << 16 | UInt32(b2) << 8 | UInt32(b3))
+  public static func read(from inp: InputPort, using buf: inout Data) -> Int32 {
+    return Int32(bitPattern: (
+      UInt32(inp.readByte()) << 24 |
+      UInt32(inp.readByte()) << 16 |
+      UInt32(inp.readByte()) <<  8 |
+      UInt32(inp.readByte())
+    ))
   }
 
   public func write(to out: OutputPort) {
@@ -132,10 +121,11 @@ extension Int32: Readable, Writable {
 }
 
 extension UInt16: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> UInt16? {
-    guard let b0 = inp.readByte() else { return nil }
-    guard let b1 = inp.readByte() else { return nil }
-    return UInt16(bigEndian: UInt16(b0) << 8 | UInt16(b1))
+  public static func read(from inp: InputPort, using buf: inout Data) -> UInt16 {
+    return UInt16(bigEndian: (
+      UInt16(inp.readByte()) << 8 |
+      UInt16(inp.readByte())
+    ))
   }
 
   public func write(to out: OutputPort) {
@@ -145,12 +135,13 @@ extension UInt16: Readable, Writable {
 }
 
 extension UInt32: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> UInt32? {
-    guard let b0 = inp.readByte() else { return nil }
-    guard let b1 = inp.readByte() else { return nil }
-    guard let b2 = inp.readByte() else { return nil }
-    guard let b3 = inp.readByte() else { return nil }
-    return UInt32(bigEndian: UInt32(b0) << 24 | UInt32(b1) << 16 | UInt32(b2) << 8 | UInt32(b3))
+  public static func read(from inp: InputPort, using buf: inout Data) -> UInt32 {
+    return UInt32(bigEndian: (
+      UInt32(inp.readByte()) << 24 |
+      UInt32(inp.readByte()) << 16 |
+      UInt32(inp.readByte()) <<  8 |
+      UInt32(inp.readByte())
+    ))
   }
 
   public func write(to out: OutputPort) {
@@ -164,13 +155,11 @@ extension UInt32: Readable, Writable {
 public typealias Varint = Int64
 
 extension Varint: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> Varint? {
+  public static func read(from inp: InputPort, using buf: inout Data) -> Varint {
     var s = Varint(0)
     var n = Varint(0)
     while true {
-      guard let b = inp.readByte() else {
-        return nil
-      }
+      let b = inp.readByte()
       let x = Int64(b)
       if x & 0x80 == 0 {
         n += x << s
@@ -203,13 +192,11 @@ extension Varint: Readable, Writable {
 public typealias UVarint = UInt64
 
 extension UVarint: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> UVarint? {
+  public static func read(from inp: InputPort, using buf: inout Data) -> UVarint {
     var s = UVarint(0)
     var n = UVarint(0)
     while true {
-      guard let b = inp.readByte() else {
-        return nil
-      }
+      let b = inp.readByte()
       let x = UInt64(b)
       if x & 0x80 == 0 {
         n += x << s
@@ -237,21 +224,20 @@ extension UVarint: Readable, Writable {
 }
 
 extension String: Readable, Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> String? {
-    guard let vlen = Varint.read(from: inp, using: &buf) else {
-      return nil
-    }
+  public static func read(from inp: InputPort, using buf: inout Data) -> String {
+    let vlen = Varint.read(from: inp, using: &buf)
     assert(vlen >= 0)
     if vlen == 0 {
       return ""
     }
     let len = Int(vlen)
     buf.grow(upTo: len)
-    if inp.read(&buf, count: len) < len {
-      return nil
+    let nread = inp.read(&buf, count: len)
+    if nread < len {
+      preconditionFailure("String: received \(nread) bytes, but expected \(len)")
     }
     guard let str = String(data: buf[0..<len], encoding: .utf8) else {
-      return nil
+      preconditionFailure("String: invalid UTF-8 bytes")
     }
     return str
   }
@@ -266,20 +252,15 @@ extension String: Readable, Writable {
 public typealias Symbol = String
 
 extension Array where Element: Readable, Element: Writable {
-  public static func read(from inp: InputPort, using buf: inout Data) -> [Element]? {
-    guard let len = Varint.read(from: inp, using: &buf) else {
-      return nil
-    }
+  public static func read(from inp: InputPort, using buf: inout Data) -> [Element] {
+    let len = Varint.read(from: inp, using: &buf)
     assert(len >= 0)
     if len == 0 {
       return []
     }
     var res = [Element]()
     for _ in 0..<len {
-      guard let r = Element.read(from: inp, using: &buf) else {
-        return nil
-      }
-      res.append(r)
+      res.append(Element.read(from: inp, using: &buf))
     }
     return res
   }
@@ -294,10 +275,7 @@ extension Array where Element: Readable, Element: Writable {
 
 extension Optional where Wrapped: Readable, Wrapped: Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Wrapped? {
-    guard let present = inp.readByte() else {
-      return nil
-    }
-    if present == 0 {
+    if inp.readByte() == 0 {
       return nil
     }
     return Wrapped.read(from: inp, using: &buf)
