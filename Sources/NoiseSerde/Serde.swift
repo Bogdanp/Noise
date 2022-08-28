@@ -292,6 +292,27 @@ extension Array where Element: Readable, Element: Writable {
   }
 }
 
+extension Optional where Wrapped: Readable, Wrapped: Writable {
+  public static func read(from inp: InputPort, using buf: inout Data) -> Wrapped? {
+    guard let present = inp.readByte() else {
+      return nil
+    }
+    if present == 0 {
+      return nil
+    }
+    return Wrapped.read(from: inp, using: &buf)
+  }
+
+  public func write(to out: OutputPort) {
+    if self == nil {
+      out.writeByte(0)
+      return
+    }
+    out.writeByte(1)
+    self.write(to: out)
+  }
+}
+
 fileprivate extension Data {
   mutating func grow(upTo n: Int) {
     let want = n - count
