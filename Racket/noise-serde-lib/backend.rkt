@@ -3,6 +3,7 @@
 (require ffi/unsafe/port
          racket/match
          "private/backend.rkt"
+         "private/debug.rkt"
          "private/serde.rkt")
 
 (provide
@@ -13,8 +14,12 @@
   (define cust (make-custodian))
   (define thd
     (parameterize ([current-custodian cust])
-      (define server-in (unsafe-file-descriptor->port in-fd 'in '(read)))
-      (define server-out (unsafe-file-descriptor->port out-fd 'out '(write)))
+      (define server-in
+        (make-debug-input-port
+         (unsafe-file-descriptor->port in-fd 'in '(read))))
+      (define server-out
+        (make-debug-output-port
+         (unsafe-file-descriptor->port out-fd 'out '(write))))
       (thread/suspend-to-kill
        (lambda ()
          (let loop ()
