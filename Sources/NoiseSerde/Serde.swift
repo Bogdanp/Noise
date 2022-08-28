@@ -122,9 +122,9 @@ extension Int32: Readable, Writable {
 
 extension UInt16: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> UInt16 {
-    return UInt16(bigEndian: (
-      UInt16(inp.readByte()) << 8 |
-      UInt16(inp.readByte())
+    return UInt16(bitPattern: (
+      Int16(inp.readByte()) << 8 |
+      Int16(inp.readByte())
     ))
   }
 
@@ -136,11 +136,11 @@ extension UInt16: Readable, Writable {
 
 extension UInt32: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> UInt32 {
-    return UInt32(bigEndian: (
-      UInt32(inp.readByte()) << 24 |
-      UInt32(inp.readByte()) << 16 |
-      UInt32(inp.readByte()) <<  8 |
-      UInt32(inp.readByte())
+    return UInt32(bitPattern: (
+      Int32(inp.readByte()) << 24 |
+      Int32(inp.readByte()) << 16 |
+      Int32(inp.readByte()) <<  8 |
+      Int32(inp.readByte())
     ))
   }
 
