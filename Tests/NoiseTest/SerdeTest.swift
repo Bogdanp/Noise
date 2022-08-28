@@ -84,6 +84,25 @@ class SerdeTests: XCTestCase {
     XCTAssertEqual(data, res)
   }
 
+  func testOptionalRoundtrip() {
+    let p = Pipe()
+    let inp = InputPort(withHandle: p.fileHandleForReading)
+    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    var buf = Data(count: 8192)
+
+    // empty
+    var data: String?
+    data.write(to: out)
+    out.flush()
+    XCTAssertEqual(data, String?.read(from: inp, using: &buf))
+
+    // full
+    data = "hello, world"
+    data.write(to: out)
+    out.flush()
+    XCTAssertEqual(data, String?.read(from: inp, using: &buf))
+  }
+
   func testStringSmallBuffer() {
     let p = Pipe()
     let s = "hello, world!"

@@ -282,12 +282,13 @@ extension Optional where Wrapped: Readable, Wrapped: Writable {
   }
 
   public func write(to out: OutputPort) {
-    if self == nil {
+    switch self {
+    case .none:
       out.writeByte(0)
-      return
+    case .some(let v):
+      out.writeByte(1)
+      v.write(to: out)
     }
-    out.writeByte(1)
-    self.write(to: out)
   }
 }
 
