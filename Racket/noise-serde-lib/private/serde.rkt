@@ -209,6 +209,7 @@
 
 (provide
  Listof
+ Optional
  Untagged
 
  (struct-out field-type)
@@ -300,12 +301,16 @@
   #:read read-uvarint
   #:write write-uvarint)
 
+(define (->field-type who t)
+  (cond
+    [(record-info?) (Untagged t)]
+    [else
+     (begin0 t
+       (unless (field-type? t)
+         (raise-argument-error who "(or/c field-type? record-info?)" t)))]))
+
 (define (Listof t)
-  (let ([t (if (record-info? t)
-               (Untagged t)
-               t)])
-    (unless (field-type? t)
-      (raise-argument-error 'Listof "(or/c field-type? record-info?)" t))
+  (let ([t (->field-type 'Listof t)])
     (define read-proc (field-type-read-proc t))
     (define write-proc (field-type-write-proc t))
     (define swift-type ((field-type-swift-proc t)))
@@ -318,6 +323,25 @@
        (for-each (λ (v) (write-proc v out)) vs))
      (λ ()
        (format "[~a]" swift-type)))))
+
+(define (Optional t)
+  (let ([t (->field-type 'Optional t)])
+    (define read-proc (field-type-read-proc t))
+    (define write-proc (field-type-write-proc t))
+    (define swift-type ((field-type-swift-proc t)))
+    (field-type
+     (λ (in)
+       (and (not (zero? (read-byte in)))
+            (read-proc in)))
+     (λ (v out)
+       (cond
+         [v
+          (write-byte 1 out)
+          (write-proc v out)]
+         [else
+          (write-byte 0 out)]))
+     (λ ()
+       (format "~a?" swift-type)))))
 
 (define-field-type Record
   #:read read-record

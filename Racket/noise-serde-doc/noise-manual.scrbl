@@ -122,6 +122,12 @@ deserialized.
   field.
 }
 
+@defproc[(Optional [t (or/c field-type? record-info?)]) field-type?]{
+  A constructor for optional @tech{field types}.  When @racket[t] is a
+  @racket[record-info?] value , it is converted to an
+  @racket[Untagged] field.
+}
+
 @defthing[Record field-type?]{
   A @tech{field type} that serializes record values by tagging them
   with their unique id.  In Swift, these values are represented by the

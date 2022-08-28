@@ -21,6 +21,7 @@
  UInt32
  UVarint
  Listof
+ Optional
  Record
  String
  Symbol
