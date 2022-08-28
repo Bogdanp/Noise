@@ -303,7 +303,8 @@
 
 (define (->field-type who t)
   (cond
-    [(record-info?) (Untagged t)]
+    [(record-info? t)
+     (Untagged t)]
     [else
      (begin0 t
        (unless (field-type? t)
