@@ -13,33 +13,16 @@
 
 (provide
  define-record
- record-out
- record?
- read-record
- write-record)
+ record-out)
 
-(define-generics record
-  {write-record record [out]})
-
-(define (read-record [in (current-input-port)])
-  (define id (read-field UVarint in))
-  (unless (hash-has-key? record-infos id)
-    (error 'read-record "unknown record type ~a" id))
-  (define r (hash-ref record-infos id))
-  (do-read-record-fileds r in))
-
-(define (do-write-record r v [out (current-output-port)])
-  (write-field UVarint (record-info-id r) out)
-  (do-write-record-fields r v out))
-
-(define (do-read-record-fileds r in)
+(define (read-record info [in (current-input-port)])
   (apply
-   (record-info-constructor r)
-   (for/list ([f (in-list (record-info-fields r))])
+   (record-info-constructor info)
+   (for/list ([f (in-list (record-info-fields info))])
      (read-field (record-field-type f) in))))
 
-(define (do-write-record-fields r v out)
-  (for ([f (in-list (record-info-fields r))])
+(define (write-record info v [out (current-output-port)])
+  (for ([f (in-list (record-info-fields info))])
     (write-field (record-field-type f) ((record-field-accessor f) v) out)))
 
 (provide
@@ -117,26 +100,17 @@
              [else
               (syntax-case stx-or-mode ()
                 [(_ arg (... ...)) #'(-name arg (... ...))]
-                [id:id #'info])]))
+                [id (identifier? #'id) #'info])]))
          (define-values (-name name? fld-accessor-id ... fld-setter-id ...)
            (let ()
              (struct name (fld.id ...)
-               #:transparent
-               #:methods gen:record
-               [(define (write-record self [out (current-output-port)])
-                  (do-write-record info self out))])
+               #:transparent)
              (define/contract (fld-setter-id r v)
                (-> name? fld.ctc name?)
                (struct-copy name r [fld.id v])) ...
              (values name name? fld-accessor-id ... fld-setter-id ...)))
          (define info
-           (let ([fields (list (record-field 'fld.id
-                                             (let ([ft fld.ft])
-                                               (if (record-info? ft)
-                                                   (Untagged ft)
-                                                   ft))
-                                             fld-accessor-id)
-                               ...)])
+           (let ([fields (list (record-field 'fld.id (->field-type 'Record fld.ft) fld-accessor-id) ...)])
              (record-info #f 'name -name fields)))
          (sequencer-add! record-info-sequencer info)
          (define/contract (constructor-id constructor-arg ...)
@@ -163,8 +137,128 @@
       [name String string?]
       [age Varint (integer-in 0 100)])
     (define h (make-Human #:name "Bogdan" #:age 30))
-    (define bs (with-output-to-bytes (λ () (write-record h))))
-    (check-equal? h (read-record (open-input-bytes bs)))))
+    (define bs (with-output-to-bytes (λ () (write-record Human h))))
+    (check-equal? h (read-record Human (open-input-bytes bs)))))
+
+
+;; enum ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(provide
+ define-enum :
+ enum-out)
+
+(define-generics enum-variant-writer
+  {write-enum-variant enum-variant-writer [out]})
+
+(define (read-enum-variant info [in current-input-port])
+  (define variants (enum-info-variants info))
+  (define variant-idx (read-field UVarint in))
+  (unless (>= (vector-length variants) variant-idx)
+    (error 'read-enum-variant "unknown variant index ~a for enum ~a" variant-idx (enum-info-name info)))
+  (define variant (vector-ref variants variant-idx))
+  (apply
+   (enum-variant-constructor variant)
+   (for/list ([f (in-list (enum-variant-fields variant))])
+     (read-field (enum-variant-field-type f) in))))
+
+(define (do-write-enum-variant info idx v [out (current-output-port)])
+  (define variant (vector-ref (enum-info-variants info) idx))
+  (write-field UVarint (enum-variant-id variant))
+  (for ([f (in-list (enum-variant-fields variant))])
+    (write-field (enum-variant-field-type f) ((enum-variant-field-accessor f) v) out)))
+
+(provide
+ enum-infos
+ (struct-out enum-info)
+ (struct-out enum-variant)
+ (struct-out enum-variant-field))
+
+(struct enum-variant-field (name type accessor))
+(struct enum-variant (id name constructor fields))
+(struct enum-info ([id #:mutable] name variants))
+
+(define enum-infos (make-hasheqv))
+(define enum-info-sequencer
+  (make-sequencer
+   enum-infos
+   enum-info-name
+   set-enum-info-id!))
+
+(define-syntax (: stx)
+  (raise-syntax-error ': "may only be used within a define-enum or define-rpc form" stx))
+
+(define-syntax (define-enum stx)
+  (syntax-parse stx
+    #:literals (:)
+    [(_ name:id [variant-name:id {field-name:id : field-type:expr} ...] ...+)
+     #:with name? (format-id #'name "~a?" #'name)
+     #:with (variant-idx ...) (for/list ([stx (in-list (syntax-e #'(variant-name ...)))]
+                                         [idx (in-naturals)])
+                                (datum->syntax stx idx))
+     #:with (variant-qualname ...) (for/list ([stx (in-list (syntax-e #'(variant-name ...)))])
+                                     (format-id #'name "~a.~a" #'name stx))
+     #:with (variant-qualname? ...) (for/list ([stx (in-list (syntax-e #'(variant-qualname ...)))])
+                                      (format-id stx "~a?" stx))
+     #:with ((field-accessor ...) ...) (for/list ([qual-stx (in-list (syntax-e #'(variant-qualname ...)))]
+                                                  [variant-stx (in-list (syntax-e #'((field-name ...) ...)))])
+                                         (for/list ([stx (in-list (syntax-e variant-stx))])
+                                           (format-id qual-stx "~a-~a" qual-stx stx)))
+     #'(begin
+         (define-syntax (name stx-or-mode)
+           (case stx-or-mode
+             [(provide)
+              #'(combine-out name name?
+                             variant-qualname ...
+                             variant-qualname? ...
+                             field-accessor ... ...)]
+             [else
+              (syntax-case stx-or-mode ()
+                [id (identifier? #'id) #'info])]))
+         (struct root ()
+           #:transparent
+           #:reflection-name 'name)
+         (define name? root?)
+         (struct variant-qualname root (field-name ...)
+           #:transparent
+           #:methods gen:enum-variant-writer
+           {(define (write-enum-variant self [out (current-output-port)])
+              (do-write-enum-variant info variant-idx self out))}) ...
+         (define info
+           (let ([variants (vector
+                            (enum-variant
+                             variant-idx
+                             'variant-name
+                             variant-qualname
+                             (list
+                              (enum-variant-field 'field-name (->field-type 'Enum field-type) field-accessor)
+                              ...))
+                            ...)])
+             (enum-info #f 'name variants)))
+         (sequencer-add! enum-info-sequencer info))]))
+
+(define-syntax enum-out
+  (make-provide-transformer
+   (lambda (stx modes)
+     (syntax-parse stx
+       [(_ id)
+        (define export-stx
+          ((syntax-local-value #'id) 'provide))
+        (expand-export export-stx modes)]))))
+
+(module+ test
+  (test-case "enum serde"
+    (define-enum Column
+      [null]
+      [default]
+      [text {t : String}])
+
+    (define tests
+      (list (Column.null)
+            (Column.default)
+            (Column.text "hello")))
+    (for ([t (in-list tests)])
+      (define bs (with-output-to-bytes (λ () (write-enum-variant t))))
+      (check-equal? t (read-enum-variant Column (open-input-bytes bs))))))
 
 
 ;; varint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -210,7 +304,8 @@
 (provide
  Listof
  Optional
- Untagged
+ Record
+ Enum
 
  (struct-out field-type)
  read-field
@@ -301,10 +396,15 @@
   #:read read-uvarint
   #:write write-uvarint)
 
+(provide
+ ->field-type)
+
 (define (->field-type who t)
   (cond
     [(record-info? t)
-     (Untagged t)]
+     (Record t)]
+    [(enum-info? t)
+     (Enum t)]
     [else
      (begin0 t
        (unless (field-type? t)
@@ -344,17 +444,21 @@
      (λ ()
        (format "~a?" swift-type)))))
 
-(define-field-type Record
-  #:read read-record
-  #:write write-record)
-
-(define (Untagged t)
+(define (Record t)
   (unless (record-info? t)
-    (raise-argument-error 'Untagged "record-info?" t))
+    (raise-argument-error 'Record "record-info?" t))
   (field-type
-   (λ (in) (do-read-record-fileds t in))
-   (λ (v out) (do-write-record-fields t v out))
+   (λ (in) (read-record t in))
+   (λ (v out) (write-record t v out))
    (λ () (symbol->string (record-info-name t)))))
+
+(define (Enum t)
+  (unless (enum-info? t)
+    (raise-argument-error 'Enum "enum-info?" t))
+  (field-type
+   (λ (in) (read-enum-variant t in))
+   (λ (v out) (write-enum-variant v out))
+   (λ () (symbol->string (enum-info-name t)))))
 
 (module+ test
   (test-case "complex field serde"
@@ -364,8 +468,8 @@
       [s String string?]
       [l (Listof Varint) list?])
     (define v (Example #t -1 "hello" '(0 1 2 #x-FF #x7F #xFFFF)))
-    (define bs (with-output-to-bytes (λ () (write-field Record v))))
-    (check-equal? v (read-field Record (open-input-bytes bs))))
+    (define bs (with-output-to-bytes (λ () (write-record Example v))))
+    (check-equal? v (read-record Example (open-input-bytes bs))))
 
   (test-case "homogeneous list serde"
     (define-record Story
@@ -378,8 +482,8 @@
       (Stories
        (list (Story 0 "a" null)
              (Story 1 "b" '(1 2 3)))))
-    (define bs (with-output-to-bytes (λ () (write-field Record v))))
-    (check-equal? v (read-field Record (open-input-bytes bs))))
+    (define bs (with-output-to-bytes (λ () (write-record Stories v))))
+    (check-equal? v (read-record Stories (open-input-bytes bs))))
 
   (test-case "nested record serde"
     (define-record A
@@ -388,5 +492,16 @@
       [a A])
     (define v
       (B (A "test")))
-    (define bs (with-output-to-bytes (λ () (write-field Record v))))
-    (check-equal? v (read-field Record (open-input-bytes bs)))))
+    (define bs (with-output-to-bytes (λ () (write-record B v))))
+    (check-equal? v (read-record B (open-input-bytes bs))))
+
+  (test-case "record with enum serde"
+    (define-enum Result
+      [err {message : String}]
+      [ok {value : UVarint}])
+    (define-record C
+      [res Result])
+    (define v
+      (C (Result.err "an error")))
+    (define bs (with-output-to-bytes (λ () (write-record C v))))
+    (check-equal? v (read-record C (open-input-bytes bs)))))

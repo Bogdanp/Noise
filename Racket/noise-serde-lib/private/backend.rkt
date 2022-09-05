@@ -6,16 +6,11 @@
          "serde.rkt")
 
 (provide
- define-rpc :
+ define-rpc
 
  rpc-infos
  (struct-out rpc-arg)
  (struct-out rpc-info))
-
-(define (normalize t)
-  (if (record-info? t)
-      (Untagged t)
-      t))
 
 (struct rpc-arg (label name type))
 (struct rpc-info ([id #:mutable] name args response-type proc))
@@ -26,9 +21,6 @@
    rpc-infos
    rpc-info-name
    set-rpc-info-id!))
-
-(define-syntax (: stx)
-  (raise-syntax-error ': "may only be used within a define-rpc form" stx))
 
 (begin-for-syntax
   (define (valid-name? id-stx)
@@ -49,7 +41,7 @@
      #:fail-unless (andmap valid-name? (syntax-e #'(arg.name ...)))
      "RPC labels may only contain alphanumeric characters, dashes and underscores"
      #'(begin
-         (define response-type (normalize type))
+         (define response-type (->field-type 'Backend type))
          (unless (field-type? response-type)
            (error 'define-rpc "~e is not a valid response type~n in: ~a" response-type 'name))
          (define (name arg.name ...)
@@ -57,11 +49,7 @@
          (define arg-types
            (for/list ([n (in-list (list 'arg.name ...))]
                       [t (in-list (list arg.type ...))])
-             (define normalized-t
-               (normalize t))
-             (begin0 normalized-t
-               (unless (field-type? normalized-t)
-                 (error 'define-rpc "~e is not a valid field type~n in arg: ~a" t n)))))
+             (->field-type 'Backend t)))
          (define args
            (for/list ([l (in-list (list 'arg.label ...))]
                       [n (in-list (list 'arg.name ...))]

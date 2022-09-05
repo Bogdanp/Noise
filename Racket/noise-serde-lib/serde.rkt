@@ -4,10 +4,11 @@
 (provide
  define-record
  record-out
- record?
  record-info?
- read-record
- write-record
+
+ define-enum :
+ enum-out
+ enum-info?
 
  field-type?
  Bool
@@ -22,7 +23,5 @@
  UVarint
  Listof
  Optional
- Record
  String
- Symbol
- Untagged)
+ Symbol)

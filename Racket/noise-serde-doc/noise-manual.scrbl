@@ -26,6 +26,8 @@ installed from a cloned version of Noise.
 @section[#:tag "serde"]{Serialization & Deserialization}
 @defmodule[noise/serde]
 
+@subsection{Records}
+
 A @deftech{record} is a data structure that is shared between Swift
 and Racket.  In both languages, they are represented by structs.  Use
 the @tt{raco} command @tt{noise-serde-codegen} to generate Swift
@@ -37,7 +39,7 @@ definitions for records reachable from a given root module.
                            [field-id field-type field-ctc-expr]
                            [(field-id default-expr) field-type]
                            [(field-id default-expr) field-type field-ctc-expr]])
-         #:contracts ([field-type (or/c field-type? record-info?)])]{
+         #:contracts ([field-type (or/c field-type? enum-info? record-info?)])]{
 
   Defines a record called @racket[name] with the given set of
   @racket[field]s.  Records are backed by structs and generate smart
@@ -68,19 +70,48 @@ definitions for records reachable from a given root module.
   information about a @tech{record}.
 }
 
-@defproc[(record? [v any/c]) boolean?]{
-  Returns @racket[#t] when @racket[v] is an instance of a @tech{record}.
+
+@subsection{Enumerations}
+
+An @deftech{enumeration} is a tagged union of product types.  In
+Racket, enum variants are represented by individual structs that
+inherit from a common base.  In Swift, they are represented using
+regular enums.
+
+@deftogether[(
+  @defidform[:]
+  @defform[
+    #:literals (:)
+    (define-enum name
+      [variant-name field ...] ...+)
+    #:grammar ([field {field-id : field-type}])
+    #:contracts ([field-type (or/c field-type? enum-info? record-info?)])]
+)]{
+
+  Defines an enumeration called @racket[name] with the given set of
+  variants.  Enumeration @racket[name]s must be unique across all
+  modules.
+
+  @examples[
+    #:eval ev
+    (define-enum Result
+      [ok]
+      [err {message : String}])
+    (Result? (Result.ok))
+    (Result? (Result.err "example"))
+    Result
+  ]
 }
 
-@defproc[(read-record [in input-port? (current-input-port)]) any/c]{
-  Reads a @tech{record} from @racket[in].
+@defform[(enum-out id)]{
+  Exports the bindings associated with an enum @racket[id].
 }
 
-@defproc[(write-record [r any/c]
-                       [out output-port? (current-output-port)]) void?]{
-  Writes @racket[r] to @racket[out].  Raises a contract error if
-  @racket[r] is not an instance of a @tech{record}.
+@defproc[(enum-info? [v any/c]) boolean?]{
+  Returns @racket[#t] when @racket[v] is a value containing runtime
+  information about an @tech{enumeration}.
 }
+
 
 @subsection{Field Types}
 
@@ -114,30 +145,14 @@ deserialized.
   @tt{Int64} and @tt{UInt64}.
 }
 
-@defproc[(Listof [t (or/c field-type? record-info?)]) field-type?]{
+@defproc[(Listof [t (or/c field-type? enum-info? record-info?)]) field-type?]{
   A constructor for @tech{field types} that represent lists composed
   of @racket[field-type] values.  In Swift, these values are
-  represented by arrays of the subtype.  When @racket[t] is a
-  @racket[record-info?] value, it is converted to an @racket[Untagged]
-  field.
+  represented by arrays of the subtype.
 }
 
-@defproc[(Optional [t (or/c field-type? record-info?)]) field-type?]{
-  A constructor for optional @tech{field types}.  When @racket[t] is a
-  @racket[record-info?] value , it is converted to an
-  @racket[Untagged] field.
-}
-
-@defthing[Record field-type?]{
-  A @tech{field type} that serializes record values by tagging them
-  with their unique id.  In Swift, these values are represented by the
-  @tt{Record} enum.
-}
-
-@defproc[(Untagged [ri record-info?]) field-type?]{
-  A constructor for @tech{field types} that serialize records without
-  tagging.  Useful for creating homogeneous lists of records and for
-  embedding records directly into one another.
+@defproc[(Optional [t (or/c field-type? enum-info? record-info?)]) field-type?]{
+  A constructor for optional @tech{field types}.
 }
 
 
@@ -148,17 +163,14 @@ The @racketmodname[noise/backend] module has an internal
 @deftech{handler registry} that is used to map remote procedure call
 ids to handler procedures.
 
-@deftogether[(
-  @defidform[:]
-  @defform[
-    #:literals (:)
-    (define-rpc (id arg ... : response-type-expr)
-      body ...+)
-    #:grammar [(arg [arg-label arg-id : arg-type-expr])]
-    #:contracts ([arg-type-expr (or/c field-type? record-info?)]
-                 [response-type-expr (or/c field-type? record-info?)])
-  ]
-)]{
+@defform[
+  #:literals (:)
+  (define-rpc (id arg ... : response-type-expr)
+    body ...+)
+  #:grammar [(arg [arg-label arg-id : arg-type-expr])]
+  #:contracts ([arg-type-expr (or/c field-type? enum-info? record-info?)]
+               [response-type-expr (or/c field-type? enum-info? record-info?)])
+]{
   Defines a procedure named @racket[id] and registers an RPC handler
   for it in the @tech{handler registry}.
 
