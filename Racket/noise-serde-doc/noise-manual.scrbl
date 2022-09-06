@@ -33,13 +33,18 @@ and Racket.  In both languages, they are represented by structs.  Use
 the @tt{raco} command @tt{noise-serde-codegen} to generate Swift
 definitions for records reachable from a given root module.
 
-@defform[(define-record name
-           field ...)
-         #:grammar ([field [field-id field-type]
-                           [field-id field-type field-ctc-expr]
-                           [(field-id default-expr) field-type]
-                           [(field-id default-expr) field-type field-ctc-expr]])
-         #:contracts ([field-type (or/c field-type? enum-info? record-info?)])]{
+@deftogether[(
+  @defidform[:]
+  @defform[
+    #:literals (:)
+    (define-record name
+      field ...)
+    #:grammar ([field [field-id : field-type]
+                      [field-id : field-type #:contract field-ctc-expr]
+                      [(field-id default-expr) : field-type]
+                      [(field-id default-expr) : field-type #:contract field-ctc-expr]])
+    #:contracts ([field-type (or/c field-type? enum-info? record-info?)])]
+)]{
 
   Defines a record called @racket[name] with the given set of
   @racket[field]s.  Records are backed by structs and generate smart
@@ -52,8 +57,9 @@ definitions for records reachable from a given root module.
   @examples[
     #:eval ev
     (define-record Human
-     [name String string?]
-     [age UVarint (integer-in 0 125)])
+      [name : String]
+      [age : UVarint #:contract (integer-in 0 125)]
+      [(likes-pizza? #t) : Bool])
     (make-Human
      #:name "Bogdan"
      #:age 30)
@@ -78,19 +84,17 @@ Racket, enum variants are represented by individual structs that
 inherit from a common base.  In Swift, they are represented using
 regular enums.
 
-@deftogether[(
-  @defidform[:]
-  @defform[
-    #:literals (:)
-    (define-enum name
-      [variant-name field ...] ...+)
-    #:grammar ([field {field-id : field-type}])
-    #:contracts ([field-type (or/c field-type? enum-info? record-info?)])]
-)]{
+@defform[
+  #:literals (:)
+  (define-enum name
+    [variant-name variant-field ...] ...+)
+  #:grammar ([variant-field {field-id : field-type}])
+  #:contracts ([field-type (or/c field-type? enum-info? record-info?)])]{
 
   Defines an enumeration called @racket[name] with the given set of
   variants.  Enumeration @racket[name]s must be unique across all
-  modules.
+  modules.  In Swift, the @racket[variant-name]s and
+  @racket[field-id]s are converted to camel case.
 
   @examples[
     #:eval ev

@@ -9,6 +9,14 @@
          racket/port
          "sequencer.rkt")
 
+;; : ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(provide :)
+
+(define-syntax (: stx)
+  (raise-syntax-error ': "may only be used within a define-enum, define-record or define-rpc form" stx))
+
+
 ;; record ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (provide
@@ -46,58 +54,58 @@
     (datum->syntax stx (string->keyword (symbol->string (syntax-e stx)))))
 
   (define-syntax-class record-field
-    (pattern [id:id ft:expr]
+    #:literals (:)
+    (pattern [id:id : ft:expr {~optional {~seq #:contract ctc-expr:expr}}]
              #:with kwd (id-stx->keyword #'id)
              #:with arg #'id
              #:with opt? #f
-             #:with ctc #'any/c)
-    (pattern [id:id ft:expr ctc:expr]
-             #:with kwd (id-stx->keyword #'id)
-             #:with arg #'id
-             #:with opt? #f)
-    (pattern [(id:id def:expr) ft:expr]
+             #:with ctc #'{~? ctc-expr any/c})
+    (pattern [(id:id def:expr) : ft:expr {~optional {~seq #:contract ctc-expr:expr}}]
              #:with kwd (id-stx->keyword #'id)
              #:with arg #'[id def]
              #:with opt? #t
-             #:with ctc #'any/c)
-    (pattern [(id:id def:expr) ft:expr ctc:expr]
-             #:with kwd (id-stx->keyword #'id)
-             #:with arg #'[id def]
-             #:with opt? #t))
+             #:with ctc #'{~? ctc-expr any/c}))
 
   (syntax-parse stx
     [(_ name:id fld:record-field ...)
      #:with name? (format-id #'name "~a?" #'name)
      #:with constructor-id (format-id #'name "make-~a" #'name)
-     #:with (fld-accessor-id ...) (for/list ([arg (in-list (syntax-e #'(fld.id ...)))])
-                                    (format-id #'name "~a-~a" #'name arg))
-     #:with (fld-setter-id ...) (for/list ([arg (in-list (syntax-e #'(fld.id ...)))])
-                                  (format-id #'name "set-~a-~a" #'name arg))
-     #:with (constructor-arg ...) (apply
-                                   append
-                                   (for/list ([kwd (in-list (syntax-e #'(fld.kwd ...)))]
-                                              [arg (in-list (syntax-e #'(fld.arg ...)))])
-                                     (list kwd arg)))
-     #:with (required-ctor-arg-ctc ...) (apply
-                                         append
-                                         (for/list ([opt? (in-list (syntax->datum #'(fld.opt? ...)))]
-                                                    [kwd  (in-list (syntax-e #'(fld.kwd ...)))]
-                                                    [ctc  (in-list (syntax-e #'(fld.ctc ...)))]
-                                                    #:unless opt?)
-                                           (list kwd ctc)))
-     #:with (optional-ctor-arg-ctc ...) (apply
-                                         append
-                                         (for/list ([opt? (in-list (syntax->datum #'(fld.opt? ...)))]
-                                                    [kwd  (in-list (syntax-e #'(fld.kwd ...)))]
-                                                    [ctc  (in-list (syntax-e #'(fld.ctc ...)))]
-                                                    #:when opt?)
-                                           (list kwd ctc)))
+     #:with (fld-accessor-id ...)
+     (for/list ([arg (in-list (syntax-e #'(fld.id ...)))])
+       (format-id #'name "~a-~a" #'name arg))
+     #:with (fld-setter-id ...)
+     (for/list ([arg (in-list (syntax-e #'(fld.id ...)))])
+       (format-id #'name "set-~a-~a" #'name arg))
+     #:with (constructor-arg ...)
+     (apply
+      append
+      (for/list ([kwd (in-list (syntax-e #'(fld.kwd ...)))]
+                 [arg (in-list (syntax-e #'(fld.arg ...)))])
+        (list kwd arg)))
+     #:with (required-ctor-arg-ctc ...)
+     (apply
+      append
+      (for/list ([opt? (in-list (syntax->datum #'(fld.opt? ...)))]
+                 [kwd  (in-list (syntax-e #'(fld.kwd ...)))]
+                 [ctc  (in-list (syntax-e #'(fld.ctc ...)))]
+                 #:unless opt?)
+        (list kwd ctc)))
+     #:with (optional-ctor-arg-ctc ...)
+     (apply
+      append
+      (for/list ([opt? (in-list (syntax->datum #'(fld.opt? ...)))]
+                 [kwd  (in-list (syntax-e #'(fld.kwd ...)))]
+                 [ctc  (in-list (syntax-e #'(fld.ctc ...)))]
+                 #:when opt?)
+        (list kwd ctc)))
      #'(begin
          (define-syntax (name stx-or-mode)
            (case stx-or-mode
-             [(provide)
+             [(provide-record)
               #'(combine-out name name? constructor-id fld-accessor-id ... fld-setter-id ...)]
              [else
+              (unless (syntax? stx-or-mode)
+                (raise-syntax-error 'name "unexpected argument to transformer" stx-or-mode))
               (syntax-case stx-or-mode ()
                 [(_ arg (... ...)) #'(-name arg (... ...))]
                 [id (identifier? #'id) #'info])]))
@@ -125,7 +133,7 @@
      (syntax-parse stx
        [(_ id)
         (define export-stx
-          ((syntax-local-value #'id) 'provide))
+          ((syntax-local-value #'id) 'provide-record))
         (expand-export export-stx modes)]))))
 
 (module+ test
@@ -134,8 +142,8 @@
 
   (test-case "record serde"
     (define-record Human
-      [name String string?]
-      [age Varint (integer-in 0 100)])
+      [name : String #:contract string?]
+      [age : Varint #:contract (integer-in 0 100)])
     (define h (make-Human #:name "Bogdan" #:age 30))
     (define bs (with-output-to-bytes (λ () (write-record Human h))))
     (check-equal? h (read-record Human (open-input-bytes bs)))))
@@ -144,7 +152,7 @@
 ;; enum ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (provide
- define-enum :
+ define-enum
  enum-out)
 
 (define-generics enum-variant-writer
@@ -184,56 +192,65 @@
    enum-info-name
    set-enum-info-id!))
 
-(define-syntax (: stx)
-  (raise-syntax-error ': "may only be used within a define-enum or define-rpc form" stx))
-
 (define-syntax (define-enum stx)
+  (define-syntax-class enum-variant
+    #:literals (:)
+    (pattern [name:id {fld-name:id : fld-type:expr} ...]))
+
   (syntax-parse stx
     #:literals (:)
-    [(_ name:id [variant-name:id {field-name:id : field-type:expr} ...] ...+)
+    [(_ name:id variant:enum-variant ...+)
      #:with name? (format-id #'name "~a?" #'name)
-     #:with (variant-idx ...) (for/list ([stx (in-list (syntax-e #'(variant-name ...)))]
-                                         [idx (in-naturals)])
-                                (datum->syntax stx idx))
-     #:with (variant-qualname ...) (for/list ([stx (in-list (syntax-e #'(variant-name ...)))])
-                                     (format-id #'name "~a.~a" #'name stx))
-     #:with (variant-qualname? ...) (for/list ([stx (in-list (syntax-e #'(variant-qualname ...)))])
-                                      (format-id stx "~a?" stx))
-     #:with ((field-accessor ...) ...) (for/list ([qual-stx (in-list (syntax-e #'(variant-qualname ...)))]
-                                                  [variant-stx (in-list (syntax-e #'((field-name ...) ...)))])
-                                         (for/list ([stx (in-list (syntax-e variant-stx))])
-                                           (format-id qual-stx "~a-~a" qual-stx stx)))
+     #:with (variant.idx ...)
+     (for/list ([stx (in-list (syntax-e #'(variant ...)))]
+                [idx (in-naturals)])
+       (datum->syntax stx idx))
+     #:with (variant.qualname ...)
+     (for/list ([stx (in-list (syntax-e #'(variant.name ...)))])
+       (format-id #'name "~a.~a" #'name stx))
+     #:with (variant.qualname? ...)
+     (for/list ([stx (in-list (syntax-e #'(variant.qualname ...)))])
+       (format-id stx "~a?" stx))
+     #:with ((variant.fld-accessor-id ...) ...)
+     (for/list ([qual-stx (in-list (syntax-e #'(variant.qualname ...)))]
+                [names-stx (in-list (syntax-e #'((variant.fld-name ...) ...)))])
+       (for/list ([stx (in-list (syntax-e names-stx))])
+         (format-id qual-stx "~a-~a" qual-stx stx)))
      #'(begin
          (define-syntax (name stx-or-mode)
            (case stx-or-mode
-             [(provide)
+             [(provide-enum)
               #'(combine-out name name?
-                             variant-qualname ...
-                             variant-qualname? ...
-                             field-accessor ... ...)]
+                             variant.qualname ...
+                             variant.qualname? ...
+                             variant.fld-accessor-id ... ...)]
              [else
+              (unless (syntax? stx-or-mode)
+                (raise-syntax-error 'name "unexpected argument to transformer" stx-or-mode))
               (syntax-case stx-or-mode ()
                 [id (identifier? #'id) #'info])]))
          (struct root ()
            #:transparent
            #:reflection-name 'name)
          (define name? root?)
-         (struct variant-qualname root (field-name ...)
+         (struct variant.qualname root (variant.fld-name ...)
            #:transparent
            #:methods gen:enum-variant-writer
            {(define (write-enum-variant self [out (current-output-port)])
-              (do-write-enum-variant info variant-idx self out))}) ...
+              (do-write-enum-variant info variant.idx self out))}) ...
+         (define variants
+           (vector
+            (enum-variant
+             variant.idx
+             'variant-name
+             variant.qualname
+             (list
+              (enum-variant-field
+               'variant.fld-name
+               (->field-type 'Enum variant.fld-type)
+               variant.fld-accessor-id) ...)) ...))
          (define info
-           (let ([variants (vector
-                            (enum-variant
-                             variant-idx
-                             'variant-name
-                             variant-qualname
-                             (list
-                              (enum-variant-field 'field-name (->field-type 'Enum field-type) field-accessor)
-                              ...))
-                            ...)])
-             (enum-info #f 'name variants)))
+           (enum-info #f 'name variants))
          (sequencer-add! enum-info-sequencer info))]))
 
 (define-syntax enum-out
@@ -242,7 +259,7 @@
      (syntax-parse stx
        [(_ id)
         (define export-stx
-          ((syntax-local-value #'id) 'provide))
+          ((syntax-local-value #'id) 'provide-enum))
         (expand-export export-stx modes)]))))
 
 (module+ test
@@ -463,21 +480,21 @@
 (module+ test
   (test-case "complex field serde"
     (define-record Example
-      [b Bool boolean?]
-      [i Varint integer?]
-      [s String string?]
-      [l (Listof Varint) list?])
+      [b : Bool #:contract boolean?]
+      [i : Varint #:contract integer?]
+      [s : String #:contract string?]
+      [l : (Listof Varint) #:contract list?])
     (define v (Example #t -1 "hello" '(0 1 2 #x-FF #x7F #xFFFF)))
     (define bs (with-output-to-bytes (λ () (write-record Example v))))
     (check-equal? v (read-record Example (open-input-bytes bs))))
 
   (test-case "homogeneous list serde"
     (define-record Story
-      [id UVarint exact-integer?]
-      [title String string?]
-      [comments (Listof UVarint) (listof exact-integer?)])
+      [id : UVarint #:contract exact-integer?]
+      [title : String #:contract string?]
+      [comments : (Listof UVarint) #:contract (listof exact-integer?)])
     (define-record Stories
-      [stories (Listof Story) (listof Story?)])
+      [stories : (Listof Story) #:contract (listof Story?)])
     (define v
       (Stories
        (list (Story 0 "a" null)
@@ -487,9 +504,9 @@
 
   (test-case "nested record serde"
     (define-record A
-      [s String])
+      [s : String])
     (define-record B
-      [a A])
+      [a : A])
     (define v
       (B (A "test")))
     (define bs (with-output-to-bytes (λ () (write-record B v))))
@@ -500,7 +517,7 @@
       [err {message : String}]
       [ok {value : UVarint}])
     (define-record C
-      [res Result])
+      [res : Result])
     (define v
       (C (Result.err "an error")))
     (define bs (with-output-to-bytes (λ () (write-record C v))))
