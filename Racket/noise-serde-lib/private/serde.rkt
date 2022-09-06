@@ -242,7 +242,7 @@
            (vector
             (enum-variant
              variant.idx
-             'variant-name
+             'variant.name
              variant.qualname
              (list
               (enum-variant-field
