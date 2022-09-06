@@ -13,7 +13,7 @@
   ((field-type-swift-proc t)))
 
 (define (~hex n)
-  (~a "0x" (number->string n 16)))
+  (~a "0x" (~a #:min-width 4 #:left-pad-string "0" #:align 'right (number->string n 16))))
 
 (define (~camel-case id)
   (regexp-replace* #rx"-([a-z])"
