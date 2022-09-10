@@ -171,7 +171,7 @@
 
 (define (do-write-enum-variant info idx v [out (current-output-port)])
   (define variant (vector-ref (enum-info-variants info) idx))
-  (write-field UVarint (enum-variant-id variant))
+  (write-field UVarint (enum-variant-id variant) out)
   (for ([f (in-list (enum-variant-fields variant))])
     (write-field (enum-variant-field-type f) ((enum-variant-field-accessor f) v) out)))
 
