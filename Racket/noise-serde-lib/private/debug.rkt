@@ -3,6 +3,7 @@
 (require racket/string)
 
 (provide
+ log-noise-debug
  make-debug-input-port
  make-debug-output-port)
 
