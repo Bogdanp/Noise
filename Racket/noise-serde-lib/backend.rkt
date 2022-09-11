@@ -32,7 +32,7 @@
                   (close-input-port server-in)
                   (close-output-port server-out)]
                  [`(response ,id ,response-type ,response-data)
-                  (log-noise-debug "response to request ~a: ~e" id response-data)
+                  (log-noise-debug "response to request ~a: ~.v" id response-data)
                   (with-handlers ([exn:fail?
                                    (λ (e)
                                      ((error-display-handler)
@@ -53,11 +53,12 @@
                                              e))])
                  (define req-id (read-uvarint in))
                  (define rpc-id (read-uvarint in))
-                 (match-define (rpc-info _id _name rpc-args response-type handler)
+                 (match-define (rpc-info _id rpc-name rpc-args response-type handler)
                    (hash-ref rpc-infos rpc-id))
                  (define args
                    (for/list ([ra (in-list rpc-args)])
                      (read-field (rpc-arg-type ra) in)))
+                 (log-noise-debug "request ~a: ~.v" req-id (cons rpc-name args))
                  (define request-cust
                    (make-custodian))
                  (define request-thd
