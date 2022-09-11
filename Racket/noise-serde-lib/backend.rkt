@@ -32,7 +32,7 @@
                   (close-input-port server-in)
                   (close-output-port server-out)]
                  [`(response ,id ,response-type ,response-data)
-                  (log-noise-debug "response to request ~a: ~.v" id response-data)
+                  (log-noise-debug "response ~a: ~.v" id response-data)
                   (with-handlers ([exn:fail?
                                    (λ (e)
                                      ((error-display-handler)
