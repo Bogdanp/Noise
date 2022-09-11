@@ -2,11 +2,11 @@
 
 (require "private/serde.rkt")
 (provide
- define-record
+ define-record :
  record-out
  record-info?
 
- define-enum :
+ define-enum
  enum-out
  enum-info?
 

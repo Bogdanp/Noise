@@ -7,7 +7,7 @@
          "private/serde.rkt")
 
 (provide
- define-rpc :
+ define-rpc
  serve)
 
 (define (serve in-fd out-fd)
