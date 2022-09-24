@@ -53,7 +53,7 @@ public class Backend {
     while true {
       let id = UVarint.read(from: inp, using: &buf)
       mu.wait()
-      guard let handler = pending[id] else{
+      guard let handler = pending[id] else {
         mu.signal()
         continue
       }
@@ -71,7 +71,7 @@ public class Backend {
   public func send<T>(
     writeProc write: (OutputPort) -> Void,
     readProc read: @escaping (InputPort, inout Data) -> T
-  ) -> Future<T> {
+  ) -> Future<Never, T> {
     mu.wait()
     let id = seq
     seq += 1
@@ -80,7 +80,7 @@ public class Backend {
     write(out)
     out.flush()
     let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
-    let fut = Future<T>()
+    let fut = Future<Never, T>()
     let handler = ResponseHandlerImpl<T>(id: id, fut: fut, read: read)
     pending[id] = handler
     totalWriteNanos += dt
@@ -118,7 +118,7 @@ fileprivate protocol ResponseHandler {
 
 fileprivate struct ResponseHandlerImpl<T>: ResponseHandler {
   let id: UInt64
-  let fut: Future<T>
+  let fut: Future<Never, T>
   let read: (InputPort, inout Data) -> T
   let time = DispatchTime.now()
 

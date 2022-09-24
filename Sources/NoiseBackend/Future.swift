@@ -1,42 +1,68 @@
 import Dispatch
 import Foundation
 
-public enum FutureWaitResult<R> {
-  case success(R)
+public struct FutureWaitError<Err>: Error {
+  let error: Err
+}
+
+public enum FutureWaitResult<Err, Res> {
+  case ok(Res)
+  case error(Err)
   case timedOut
 }
 
 /// A container for data that will be received from a Backend at some
 /// point.
-public class Future<T> {
+public class Future<Err, Res> {
   private let mu = DispatchSemaphore(value: 1)
   private var waiters = [DispatchSemaphore]()
-  private var data: T? = nil
+  private var data: Res? = nil
+  private var error: Err? = nil
 
-  func resolve(with data: T) {
+  public init() {}
+
+  /// Resolve the future with `d` and signal all the waiters (if any).
+  public func resolve(with d: Res) {
     mu.wait()
-    defer { mu.signal() }
-    self.data = data
-    for w in waiters {
-      w.signal()
-    }
+    data = d
+    touch()
+    mu.signal()
+  }
+
+  /// Fail the future with `e` and signal all the waiters (if any).
+  public func fail(with e: Err) {
+    mu.wait()
+    error = e
+    touch()
+    mu.signal()
+  }
+
+  private func touch() {
+    waiters.forEach { $0.signal() }
     waiters.removeAll()
   }
 
   /// Return a new future containing the result of `proc` once data is
   /// available on this future.
-  public func map<R>(_ proc: @escaping (T) -> R) -> Future<R> {
-    let fut = Future<R>()
+  public func map<R>(_ proc: @escaping (Res) -> R) -> Future<Err, R> {
+    let fut = Future<Err, R>()
     DispatchQueue.global(qos: .default).async {
-      fut.resolve(with: proc(self.wait()))
+      switch self.wait(timeout: .distantFuture) {
+      case .ok(let data):
+        fut.resolve(with: proc(data))
+      case .error(let error):
+        fut.fail(with: error)
+      case .timedOut:
+        preconditionFailure("unexpected timeout")
+      }
     }
     return fut
   }
 
   /// Runs `proc` on `queue` with the future's result once ready.
-  public func onComplete(queue: DispatchQueue = DispatchQueue.main, _ proc: @escaping (T) -> Void) {
+  public func onComplete(queue: DispatchQueue = DispatchQueue.main, _ proc: @escaping (Res) -> Void) {
     DispatchQueue.global(qos: .default).async {
-      let res = self.wait()
+      let res = try! self.wait()
       queue.async {
         proc(res)
       }
@@ -44,32 +70,44 @@ public class Future<T> {
   }
 
   /// Block the current thread until data is available.
-  public func wait() -> T {
+  public func wait() throws -> Res {
     mu.wait()
     if let d = data {
       mu.signal()
       return d
+    } else if let e = error {
+      mu.signal()
+      throw FutureWaitError(error: e)
     }
     let waiter = DispatchSemaphore(value: 0)
     waiters.append(waiter)
     mu.signal()
     waiter.wait()
-    return data!
+    if let d = data {
+      return d
+    }
+    throw FutureWaitError(error: error!)
   }
 
   /// Block the current thread until data is available or the timeout expires.
-  public func wait(timeout t: DispatchTime) -> FutureWaitResult<T> {
+  public func wait(timeout t: DispatchTime) -> FutureWaitResult<Err, Res> {
     mu.wait()
     if let d = data {
       mu.signal()
-      return .success(d)
+      return .ok(d)
+    } else if let e = error {
+      mu.signal()
+      return .error(e)
     }
     let waiter = DispatchSemaphore(value: 0)
     waiters.append(waiter)
     mu.signal()
     switch waiter.wait(timeout: t) {
     case .success:
-      return .success(data!)
+      if let d = data {
+        return .ok(d)
+      }
+      return .error(error!)
     case .timedOut:
       mu.wait()
       waiters.removeAll { $0 == waiter }

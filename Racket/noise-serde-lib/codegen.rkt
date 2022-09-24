@@ -57,7 +57,7 @@
                  (swift-type type)))
        ", "))
     (fprintf out "~n")
-    (fprintf out "  public func ~a(~a) -> Future<~a> {~n" (~camel-case name) args-str (swift-type type))
+    (fprintf out "  public func ~a(~a) -> Future<Never, ~a> {~n" (~camel-case name) args-str (swift-type type))
     (fprintf out "    return impl.send(~n")
     (fprintf out "      writeProc: { (out: OutputPort) in~n")
     (fprintf out "        UVarint(~a).write(to: out)~n" (~hex id))

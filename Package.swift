@@ -48,6 +48,7 @@ let package = Package(
       name: "NoiseTest",
       dependencies: [
         "Noise",
+        "NoiseBackend",
         "NoiseSerde",
       ],
       resources: [
