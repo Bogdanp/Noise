@@ -71,7 +71,7 @@ public class Backend {
   public func send<T>(
     writeProc write: (OutputPort) -> Void,
     readProc read: @escaping (InputPort, inout Data) -> T
-  ) -> Future<Never, T> {
+  ) -> Future<String, T> {
     mu.wait()
     let id = seq
     seq += 1
@@ -80,7 +80,7 @@ public class Backend {
     write(out)
     out.flush()
     let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
-    let fut = Future<Never, T>()
+    let fut = Future<String, T>()
     let handler = ResponseHandlerImpl<T>(id: id, fut: fut, read: read)
     pending[id] = handler
     totalWriteNanos += dt
@@ -118,15 +118,21 @@ fileprivate protocol ResponseHandler {
 
 fileprivate struct ResponseHandlerImpl<T>: ResponseHandler {
   let id: UInt64
-  let fut: Future<Never, T>
+  let fut: Future<String, T>
   let read: (InputPort, inout Data) -> T
   let time = DispatchTime.now()
 
   func handle(from inp: InputPort, using buf: inout Data) -> UInt64 {
     let t0 = DispatchTime.now()
-    let data = read(inp, &buf)
+    if inp.readByte() == 1 {
+      let data = read(inp, &buf)
+      let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
+      fut.resolve(with: data)
+      return dt
+    }
+    let err = String.read(from: inp, using: &buf)
     let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
-    fut.resolve(with: data)
+    fut.fail(with: err)
     return dt
   }
 }

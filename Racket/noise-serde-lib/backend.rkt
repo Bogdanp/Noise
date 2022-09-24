@@ -39,7 +39,13 @@
                                       (format "backend/serve write failed: ~a" (exn-message e))
                                       e))])
                     (write-uvarint id server-out)
-                    (write-field response-type response-data server-out)
+                    (cond
+                      [(exn:fail? response-data)
+                       (write-byte 0 server-out)
+                       (write-field String (exn-message response-data) server-out)]
+                      [else
+                       (write-byte 1 server-out)
+                       (write-field response-type response-data server-out)])
                     (flush-output server-out))
                   (loop)]
                  [msg
@@ -66,7 +72,13 @@
                      (thread
                       (lambda ()
                         (define response-data
-                          (apply handler args))
+                          (with-handlers ([exn:fail?
+                                           (λ (e)
+                                             (begin0 e
+                                               ((error-display-handler)
+                                                (format "backend/handler: ~a" (exn-message e))
+                                                e)))])
+                            (apply handler args)))
                         (thread-resume thd (current-thread))
                         (thread-send thd `(response ,req-id ,response-type ,response-data))))))
                  (thread

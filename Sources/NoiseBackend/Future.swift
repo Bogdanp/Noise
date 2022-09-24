@@ -62,9 +62,16 @@ public class Future<Err, Res> {
   /// Runs `proc` on `queue` with the future's result once ready.
   public func onComplete(queue: DispatchQueue = DispatchQueue.main, _ proc: @escaping (Res) -> Void) {
     DispatchQueue.global(qos: .default).async {
-      let res = try! self.wait()
+      let res = self.wait(timeout: .distantFuture)
       queue.async {
-        proc(res)
+        switch res {
+        case .ok(let res):
+          proc(res)
+        case .error(let err):
+          preconditionFailure("unexpected error: \(err)")
+        case .timedOut:
+          preconditionFailure("unreachable")
+        }
       }
     }
   }
