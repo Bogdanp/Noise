@@ -3,7 +3,7 @@ import NoiseBackend
 import XCTest
 
 class FutureTests: XCTestCase {
-  func testFail() {
+  func testReject() {
     let f = Future<String, Never>()
     DispatchQueue.global(qos: .background).async {
       f.reject(with: "failed")
