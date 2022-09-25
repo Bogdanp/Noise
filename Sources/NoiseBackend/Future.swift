@@ -42,21 +42,61 @@ public class Future<Err, Res> {
     waiters.removeAll()
   }
 
-  /// Return a new future containing the result of `proc` once data is
-  /// available on this future.
+  /// Returns a new Future containing the result of applying `proc` to
+  /// the data contained in the Future (once available).
   public func map<R>(_ proc: @escaping (Res) -> R) -> Future<Err, R> {
-    let fut = Future<Err, R>()
+    let f = Future<Err, R>()
     DispatchQueue.global(qos: .default).async {
       switch self.wait(timeout: .distantFuture) {
       case .ok(let data):
-        fut.resolve(with: proc(data))
+        f.resolve(with: proc(data))
       case .error(let error):
-        fut.reject(with: error)
+        f.reject(with: error)
       case .timedOut:
-        preconditionFailure("unexpected timeout")
+        preconditionFailure("unreachable")
       }
     }
-    return fut
+    return f
+  }
+
+  /// Returns a new Future containing the result of applying `proc` to
+  /// the error contained in the Future (once available and if any).
+  public func mapError<E>(_ proc: @escaping (Err) -> E) -> Future<E, Res> {
+    let f = Future<E, Res>()
+    DispatchQueue.global(qos: .default).async {
+      switch self.wait(timeout: .distantFuture) {
+      case .ok(let data):
+        f.resolve(with: data)
+      case .error(let error):
+        f.reject(with: proc(error))
+      case .timedOut:
+        preconditionFailure("unreachable")
+      }
+    }
+    return f
+  }
+
+  /// Chains two Futures together.
+  public func andThen<R>(_ proc: @escaping (Res) -> Future<Err, R>) -> Future<Err, R> {
+    let f = Future<Err, R>()
+    DispatchQueue.global(qos: .default).async {
+      switch self.wait(timeout: .distantFuture) {
+      case .ok(let data):
+        switch proc(data).wait(timeout: .distantFuture) {
+        case .ok(let res):
+          f.resolve(with: res)
+        case .error(let err):
+          f.reject(with: err)
+        case .timedOut:
+          preconditionFailure("unreachable")
+        }
+      case .error(let err):
+        f.reject(with: err)
+      case .timedOut:
+        preconditionFailure("unreachable")
+      }
+    }
+    return f
   }
 
   /// Runs `proc` on `queue` with the future's result once ready.

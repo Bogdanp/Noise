@@ -27,6 +27,29 @@ class FutureTests: XCTestCase {
     XCTAssertEqual(84, try! g.wait())
   }
 
+  func testMapError() {
+    let f = Future<String, Never>()
+    f.reject(with: "failed")
+    let g = f.mapError { $0.uppercased() }
+    switch g.wait(timeout: .now() + 0.5) {
+    case .error(let err):
+      XCTAssertEqual("FAILED", err)
+    default:
+      XCTFail()
+    }
+  }
+
+  func testAndThen() {
+    let f = Future<Never, String>()
+    f.resolve(with: "hello")
+    let g = f.andThen { str in
+      let g = Future<Never, Int>()
+      g.resolve(with: str.count)
+      return g
+    }
+    XCTAssertEqual(5, try! g.wait())
+  }
+
   func testTimeout() {
     let f = Future<Never, Int>()
     switch f.wait(timeout: .now() + 0.5) {
