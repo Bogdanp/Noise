@@ -125,14 +125,10 @@ fileprivate struct ResponseHandlerImpl<T>: ResponseHandler {
   func handle(from inp: InputPort, using buf: inout Data) -> UInt64 {
     let t0 = DispatchTime.now()
     if inp.readByte() == 1 {
-      let data = read(inp, &buf)
-      let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
-      fut.resolve(with: data)
-      return dt
+      fut.resolve(with: read(inp, &buf))
+    } else {
+      fut.reject(with: String.read(from: inp, using: &buf))
     }
-    let err = String.read(from: inp, using: &buf)
-    let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
-    fut.fail(with: err)
-    return dt
+    return DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
   }
 }

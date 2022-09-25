@@ -30,7 +30,7 @@ public class Future<Err, Res> {
   }
 
   /// Fail the future with `e` and signal all the waiters (if any).
-  public func fail(with e: Err) {
+  public func reject(with e: Err) {
     mu.wait()
     error = e
     touch()
@@ -51,7 +51,7 @@ public class Future<Err, Res> {
       case .ok(let data):
         fut.resolve(with: proc(data))
       case .error(let error):
-        fut.fail(with: error)
+        fut.reject(with: error)
       case .timedOut:
         preconditionFailure("unexpected timeout")
       }

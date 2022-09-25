@@ -6,7 +6,7 @@ class FutureTests: XCTestCase {
   func testFail() {
     let f = Future<String, Never>()
     DispatchQueue.global(qos: .background).async {
-      f.fail(with: "failed")
+      f.reject(with: "failed")
     }
     XCTAssertThrowsError(try f.wait())
   }
