@@ -99,21 +99,37 @@ public class Future<Err, Res> {
     return f
   }
 
-  /// Runs `proc` on `queue` with the future's result once ready.
-  public func onComplete(queue: DispatchQueue = DispatchQueue.main, _ proc: @escaping (Res) -> Void) {
+  /// Executes `errorProc` or `completeProc` on `queue` depending on
+  /// whether the Future succeeds or fails.  The default error proc
+  /// has no effect.
+  public func sink(
+    queue: DispatchQueue = DispatchQueue.main,
+    onError errorProc: @escaping (Err) -> Void = { _ in },
+    onComplete completeProc: @escaping (Res) -> Void
+  ) {
     DispatchQueue.global(qos: .default).async {
       let res = self.wait(timeout: .distantFuture)
       queue.async {
         switch res {
         case .ok(let res):
-          proc(res)
+          completeProc(res)
         case .error(let err):
-          preconditionFailure("unexpected error: \(err)")
+          errorProc(err)
         case .timedOut:
           preconditionFailure("unreachable")
         }
       }
     }
+  }
+
+  /// Executes `proc` on `queue` with the Future's data if and once
+  /// available.
+  public func onComplete(queue: DispatchQueue = DispatchQueue.main, _ proc: @escaping (Res) -> Void) {
+    sink(
+      queue: queue,
+      onError: { preconditionFailure("unexpected error: \($0)") },
+      onComplete: proc
+    )
   }
 
   /// Block the current thread until data is available.
