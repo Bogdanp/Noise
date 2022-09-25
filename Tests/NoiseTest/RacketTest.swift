@@ -22,6 +22,10 @@ class RacketTest: XCTestCase {
     }
   }
 
+  override class func tearDown() {
+    r.destroy()
+  }
+
   func testApplication() {
     r.bracket {
       let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("fib"), Val.null))

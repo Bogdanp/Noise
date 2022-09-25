@@ -48,7 +48,7 @@ public class InputPort {
     return have
   }
 
-  /// Reads a single byte from the handle, returning `nil` on EOF.
+  /// Reads a single byte from the handle.
   public func readByte() -> UInt8 {
     repeat {
       more()

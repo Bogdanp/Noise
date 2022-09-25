@@ -20,6 +20,10 @@ int racket_destroy_thread() {
   return Sdestroy_thread();
 }
 
+void racket_destroy() {
+  return Sscheme_deinit();
+}
+
 ptr racket_nil   = Snil;
 ptr racket_false = Sfalse;
 ptr racket_true  = Strue;

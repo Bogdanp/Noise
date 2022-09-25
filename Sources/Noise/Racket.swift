@@ -87,6 +87,11 @@ public struct Racket {
   public func deactivate() {
     racket_deactivate_thread()
   }
+
+  /// Tears down the Chez Scheme runtime.
+  public func destroy() {
+    racket_destroy()
+  }
 }
 
 /// An unsafe wrapper for Chez Scheme values.
