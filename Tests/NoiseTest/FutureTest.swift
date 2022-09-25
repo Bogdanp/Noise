@@ -42,7 +42,7 @@ class FutureTests: XCTestCase {
   func testAndThen() {
     let f = Future<Never, String>()
     f.resolve(with: "hello")
-    let g = f.andThen { str in
+    let g: Future<Never, Int> = f.andThen { str in
       let g = Future<Never, Int>()
       g.resolve(with: str.count)
       return g
