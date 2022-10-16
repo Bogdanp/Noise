@@ -169,9 +169,11 @@ ids to handler procedures.
 
 @defform[
   #:literals (:)
-  (define-rpc (id arg ... : response-type-expr)
+  (define-rpc (id arg ... maybe-response-type)
     body ...+)
-  #:grammar [(arg [arg-label arg-id : arg-type-expr])]
+  #:grammar [(arg [arg-label arg-id : arg-type-expr])
+             (maybe-response-type (code:line)
+                                  (code:line : response-type-expr))]
   #:contracts ([arg-type-expr (or/c field-type? enum-info? record-info?)]
                [response-type-expr (or/c field-type? enum-info? record-info?)])
 ]{
@@ -187,6 +189,9 @@ ids to handler procedures.
 
   @examples[
     #:eval ev
+    (define-rpc (do-nothing)
+      (void))
+    (do-nothing)
     (define-rpc (get-human-name [of h : Human] : String)
       (Human-name h))
     (get-human-name (make-Human #:name "Bogdan" #:age 30))

@@ -413,6 +413,11 @@
   #:read read-uvarint
   #:write write-uvarint)
 
+(define-field-type Void
+  #:read (λ (_in) (error 'Void "cannot read Void values"))
+  #:write (λ (_v _out) (error 'Void "cannot write Void values"))
+  #:swift (λ () "Void"))
+
 (provide
  ->field-type)
 

@@ -35,13 +35,14 @@
 (define-syntax (define-rpc stx)
   (syntax-parse stx
     #:literals (:)
-    [(_ (name:id arg:arg ... : type:expr) body ...+)
+    [(_ (name:id arg:arg ... {~optional {~seq : type:expr}}) body ...+)
      #:fail-unless (valid-name? #'name)
      "RPC names may only contain alphanumeric characters, dashes and underscores"
      #:fail-unless (andmap valid-name? (syntax-e #'(arg.name ...)))
      "RPC labels may only contain alphanumeric characters, dashes and underscores"
      #'(begin
-         (define response-type (->field-type 'Backend type))
+         (define response-type
+           {~? (->field-type 'Backend type) Void})
          (unless (field-type? response-type)
            (error 'define-rpc "~e is not a valid response type~n in: ~a" response-type 'name))
          (define (name arg.name ...)

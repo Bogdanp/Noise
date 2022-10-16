@@ -65,9 +65,13 @@
       (match-define (rpc-arg _label name _type) arg)
       (fprintf out "        ~a.write(to: out)~n" (~camel-case name)))
     (fprintf out "      },~n")
-    (fprintf out "      readProc: { (inp: InputPort, buf: inout Data) -> ~a in~n" (swift-type type))
-    (fprintf out "        return ~a.read(from: inp, using: &buf)~n" (swift-type type))
-    (fprintf out "      }~n")
+    (cond
+      [(eq? type Void)
+       (fprintf out "      readProc: { (inp: InputPort, buf: inout Data) -> Void in }~n")]
+      [else
+       (fprintf out "      readProc: { (inp: InputPort, buf: inout Data) -> ~a in~n" (swift-type type))
+       (fprintf out "        return ~a.read(from: inp, using: &buf)~n" (swift-type type))
+       (fprintf out "      }~n")])
     (fprintf out "    )~n")
     (fprintf out "  }~n"))
   (fprintf out "}~n"))

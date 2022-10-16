@@ -45,7 +45,8 @@
                        (write-field String (exn-message response-data) server-out)]
                       [else
                        (write-byte 1 server-out)
-                       (write-field response-type response-data server-out)])
+                       (unless (eq? response-type Void)
+                         (write-field response-type response-data server-out))])
                     (flush-output server-out))
                   (loop)]
                  [msg
