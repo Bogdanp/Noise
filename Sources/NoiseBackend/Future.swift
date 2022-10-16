@@ -21,6 +21,20 @@ public class Future<Err, Res> {
 
   public init() {}
 
+  /// Returns a future that is immediately resolved.
+  public static func resolved<Res>(with d: Res) -> Future<Never, Res> {
+    let fut = Future<Never, Res>()
+    fut.resolve(with: d)
+    return fut
+  }
+
+  /// Returns a future that is immediately rejected.
+  public static func rejected<Err>(with err: Err) -> Future<Err, Never> {
+    let fut = Future<Err, Never>()
+    fut.reject(with: err)
+    return fut
+  }
+
   /// Resolve the future with `d` and signal all the waiters (if any).
   public func resolve(with d: Res) {
     mu.wait()
