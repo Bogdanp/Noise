@@ -1,10 +1,17 @@
 import Dispatch
 import Foundation
 
+private var defaultErrorHandler: (Any) -> Void = { err in
+  preconditionFailure("unexpected error: \(err)")
+}
+
+/// Thrown by `Future.wait` on error.
 public struct FutureWaitError<Err>: Error {
   let error: Err
 }
 
+/// Represents the disjoint result values that may be returned by
+/// calls to `Future.wait(timeout:)`.
 public enum FutureWaitResult<Err, Res> {
   case ok(Res)
   case error(Err)
@@ -20,20 +27,6 @@ public class Future<Err, Res> {
   private var error: Err? = nil
 
   public init() {}
-
-  /// Returns a future that is immediately resolved.
-  public static func resolved<Res>(with d: Res) -> Future<Never, Res> {
-    let fut = Future<Never, Res>()
-    fut.resolve(with: d)
-    return fut
-  }
-
-  /// Returns a future that is immediately rejected.
-  public static func rejected<Err>(with err: Err) -> Future<Err, Never> {
-    let fut = Future<Err, Never>()
-    fut.reject(with: err)
-    return fut
-  }
 
   /// Resolve the future with `d` and signal all the waiters (if any).
   public func resolve(with d: Res) {
@@ -141,7 +134,7 @@ public class Future<Err, Res> {
   public func onComplete(queue: DispatchQueue = DispatchQueue.main, _ proc: @escaping (Res) -> Void) {
     sink(
       queue: queue,
-      onError: { preconditionFailure("unexpected error: \($0)") },
+      onError: defaultErrorHandler,
       onComplete: proc
     )
   }
@@ -191,5 +184,26 @@ public class Future<Err, Res> {
       mu.signal()
       return .timedOut
     }
+  }
+}
+
+public class FutureUtil {
+  /// Returns a future that is immediately resolved.
+  public static func resolved<Res>(with d: Res) -> Future<Never, Res> {
+    let fut = Future<Never, Res>()
+    fut.resolve(with: d)
+    return fut
+  }
+
+  /// Returns a future that is immediately rejected.
+  public static func rejected<Err>(with err: Err) -> Future<Err, Never> {
+    let fut = Future<Err, Never>()
+    fut.reject(with: err)
+    return fut
+  }
+
+  /// Sets the default error handler that is used by `Future.onComplete`.
+  public static func set(defaultErrorHandler hdl: @escaping (Any) -> Void) {
+    defaultErrorHandler = hdl
   }
 }

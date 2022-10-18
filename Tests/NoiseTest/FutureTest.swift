@@ -4,12 +4,12 @@ import XCTest
 
 class FutureTests: XCTestCase {
   func testRejected() {
-    let f = Future<String, Never>.rejected(with: "failed")
+    let f = FutureUtil.rejected(with: "failed")
     XCTAssertThrowsError(try f.wait())
   }
 
   func testResolved() {
-    let f = Future<Never, Int>.resolved(with: 42)
+    let f = FutureUtil.resolved(with: 42)
     let r = try! f.wait()
     XCTAssertEqual(42, r)
   }
