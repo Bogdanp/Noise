@@ -13,6 +13,9 @@ jobs:
         with:
           swift-version: '5.6.1'
 
+      - name: Check Swift Version
+        run: swift --version
+
       - name: Setup Racket
         uses: Bogdanp/setup-racket@v1.8.1
         with:
