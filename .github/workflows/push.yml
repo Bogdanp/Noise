@@ -36,4 +36,7 @@ jobs:
         run: git lfs pull
 
       - name: Build & Test
-        run: make && swift build -Xswiftc -Xfrontend -Xswiftc -validate-tbd-against-ir=none && swift test
+        run: |
+          make && \
+            swift build -Xswiftc -Xfrontend -Xswiftc -validate-tbd-against-ir=none && \
+            swift test -Xswiftc -Xfrontend -Xswiftc -validate-tbd-against-ir=none
