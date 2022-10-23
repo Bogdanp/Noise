@@ -17,7 +17,7 @@ jobs:
         run: swift --version
 
       - name: Setup Racket
-        uses: Bogdanp/setup-racket@v1.8.1
+        uses: Bogdanp/setup-racket@v1.9
         with:
           variant: 'CS'
           version: '8.6'
@@ -27,7 +27,7 @@ jobs:
         run: git lfs ls-files -l | cut -d ' ' -f1 | sort > .lfs-ids
 
       - name: Cache LFS files
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .git/lfs
           key: lfs-${{ hashFiles('.lfs-ids') }}
