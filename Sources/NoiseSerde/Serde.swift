@@ -33,7 +33,11 @@ extension Data: Readable, Writable {
     if nread < len {
       preconditionFailure("Data: received \(nread) bytes but expected \(len)")
     }
-    return buf[0..<len]
+    var res = Data(count: len)
+    try! res.withUnsafeMutableBytes { (ptr: UnsafeMutableRawBufferPointer) throws -> Void in
+      buf.copyBytes(to: ptr, count: len)
+    }
+    return res
   }
 
   public func write(to out: OutputPort) {
