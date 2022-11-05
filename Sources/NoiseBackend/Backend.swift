@@ -2,6 +2,12 @@ import Dispatch
 import Foundation
 import Noise
 import NoiseSerde
+import OSLog
+
+fileprivate let logger = Logger(
+  subsystem: "io.defn.NoiseBackend",
+  category: "Backend"
+)
 
 /// Statistics reported by Backends.
 public struct BackendStats {
@@ -52,19 +58,24 @@ public class Backend {
     var buf = Data(count: 8*1024) // will grow as needed
     while true {
       let id = UVarint.read(from: inp, using: &buf)
+      logger.debug("reading response \(id), bufsize: \(buf.count)b")
       mu.wait()
       guard let handler = pending[id] else {
+        logger.fault("future for response \(id) gone")
         mu.signal()
         continue
       }
       mu.signal()
-      let dt = handler.handle(from: inp, using: &buf)
+      let readDuration = handler.handle(from: inp, using: &buf)
+      logger.debug("took \(readDuration/1000)µs to read response \(id)")
       mu.wait()
       pending.removeValue(forKey: id)
+      let requestDuration = DispatchTime.now().uptimeNanoseconds - handler.time.uptimeNanoseconds
       totalRequests += 1
-      totalWaitNanos += DispatchTime.now().uptimeNanoseconds - handler.time.uptimeNanoseconds
-      totalReadNanos += dt
+      totalWaitNanos += requestDuration
+      totalReadNanos += readDuration
       mu.signal()
+      logger.debug("took \(requestDuration/1000/1000)ms to fulfill request \(id)")
     }
   }
 
