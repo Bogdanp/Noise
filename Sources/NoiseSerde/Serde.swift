@@ -261,6 +261,7 @@ extension Array where Element: Readable, Element: Writable {
       return []
     }
     var res = [Element]()
+    res.reserveCapacity(Int(len))
     for _ in 0..<len {
       res.append(Element.read(from: inp, using: &buf))
     }
