@@ -24,9 +24,17 @@ void racket_destroy() {
   return Sscheme_deinit();
 }
 
-ptr racket_nil   = Snil;
-ptr racket_false = Sfalse;
-ptr racket_true  = Strue;
+ptr racket_nil() {
+  return Snil;
+}
+
+ptr racket_false() {
+  return Sfalse;
+}
+
+ptr racket_true() {
+  return Strue;
+}
 
 int racket_fixnump(ptr p) {
   return Sfixnump(p);
