@@ -36,9 +36,11 @@ public class Backend {
     Thread.detachNewThread {
       self.serve(zo, mod, proc)
     }
-    Thread.detachNewThread {
+    let reader = Thread {
       self.read()
     }
+    reader.qualityOfService = .userInteractive
+    reader.start()
   }
 
   private func serve(_ zo: URL, _ mod: String, _ proc: String) {
