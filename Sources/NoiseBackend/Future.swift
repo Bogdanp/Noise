@@ -5,23 +5,6 @@ private var defaultErrorHandler: (Any) -> Void = { err in
   preconditionFailure("unexpected error: \(err)")
 }
 
-/// Thrown by `Future.wait` when a Future is canceled.
-public struct FutureCanceled: Error {}
-
-/// Thrown by `Future.wait` on error.
-public struct FutureWaitError<Err>: Error {
-  let error: Err
-}
-
-/// Represents the disjoint result values that may be returned by
-/// calls to `Future.wait(timeout:)`.
-public enum FutureWaitResult<Err, Res> {
-  case timedOut
-  case canceled
-  case error(Err)
-  case ok(Res)
-}
-
 /// A container for data that will be received from a Backend at some
 /// point.
 public class Future<Err, Res> {
@@ -36,6 +19,23 @@ public class Future<Err, Res> {
   }
 
   private var state = State.pending
+
+  /// Thrown by `Future.wait` when a Future is canceled.
+  public struct Canceled: Error {}
+
+  /// Thrown by `Future.wait` on error.
+  public struct WaitError<Err>: Error {
+    let error: Err
+  }
+
+  /// Represents the disjoint result values that may be returned by
+  /// calls to `Future.wait(timeout:)`.
+  public enum WaitResult<Err, Res> {
+    case timedOut
+    case canceled
+    case error(Err)
+    case ok(Res)
+  }
 
   public init() {}
 
@@ -187,26 +187,26 @@ public class Future<Err, Res> {
       case .pending:
         preconditionFailure("impossible state")
       case .canceled:
-        throw FutureCanceled()
+        throw Canceled()
       case .ok(let res):
         return res
       case .error(let err):
-        throw FutureWaitError(error: err)
+        throw WaitError(error: err)
       }
     case .canceled:
       mu.signal()
-      throw FutureCanceled()
+      throw Canceled()
     case .ok(let res):
       mu.signal()
       return res
     case .error(let err):
       mu.signal()
-      throw FutureWaitError(error: err)
+      throw WaitError(error: err)
     }
   }
 
   /// Block the current thread until data is available or the timeout expires.
-  public func wait(timeout t: DispatchTime) -> FutureWaitResult<Err, Res> {
+  public func wait(timeout t: DispatchTime) -> WaitResult<Err, Res> {
     mu.wait()
     switch state {
     case .pending:
