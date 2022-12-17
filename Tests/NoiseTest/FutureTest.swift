@@ -64,10 +64,36 @@ class FutureTests: XCTestCase {
   func testTimeout() {
     let f = Future<Never, Int>()
     switch f.wait(timeout: .now() + 0.5) {
-    case .ok, .error:
-      XCTFail()
     case .timedOut:
       XCTAssertTrue(true)
+    default:
+      XCTFail()
+    }
+  }
+
+  func testCancelImmediately() {
+    let f = Future<Never, Int>()
+    f.cancel()
+    switch f.wait(timeout: .now() + 0.1) {
+    case .canceled:
+      XCTAssertTrue(true)
+    default:
+      XCTFail()
+    }
+  }
+
+  func testCancelConcurrently() {
+    let f = Future<Never, Int>()
+    DispatchQueue.global(qos: .background).async {
+      Thread.sleep(forTimeInterval: 0.5)
+      f.resolve(with: 42)
+    }
+    f.cancel()
+    switch f.wait(timeout: .now() + 1.0) {
+    case .canceled:
+      XCTAssertTrue(true)
+    default:
+      XCTFail()
     }
   }
 }

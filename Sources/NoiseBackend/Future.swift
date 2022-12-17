@@ -5,6 +5,9 @@ private var defaultErrorHandler: (Any) -> Void = { err in
   preconditionFailure("unexpected error: \(err)")
 }
 
+/// Thrown by `Future.wait` when a Future is canceled.
+public struct FutureCanceled: Error {}
+
 /// Thrown by `Future.wait` on error.
 public struct FutureWaitError<Err>: Error {
   let error: Err
@@ -13,9 +16,10 @@ public struct FutureWaitError<Err>: Error {
 /// Represents the disjoint result values that may be returned by
 /// calls to `Future.wait(timeout:)`.
 public enum FutureWaitResult<Err, Res> {
-  case ok(Res)
-  case error(Err)
   case timedOut
+  case canceled
+  case error(Err)
+  case ok(Res)
 }
 
 /// A container for data that will be received from a Backend at some
@@ -23,24 +27,44 @@ public enum FutureWaitResult<Err, Res> {
 public class Future<Err, Res> {
   private let mu = DispatchSemaphore(value: 1)
   private var waiters = [DispatchSemaphore]()
-  private var data: Res? = nil
-  private var error: Err? = nil
+
+  private enum State {
+    case pending
+    case canceled
+    case error(Err)
+    case ok(Res)
+  }
+
+  private var state = State.pending
 
   public init() {}
 
   /// Resolve the future with `d` and signal all the waiters (if any).
-  public func resolve(with d: Res) {
-    mu.wait()
-    data = d
-    touch()
-    mu.signal()
+  public func resolve(with res: Res) {
+    transition(toState: .ok(res))
   }
 
   /// Fail the future with `e` and signal all the waiters (if any).
-  public func reject(with e: Err) {
+  public func reject(with err: Err) {
+    transition(toState: .error(err))
+  }
+
+  /// Cancel the future, preventing any completion callbacks from
+  /// running if they haven't already.  Does not affect the underlying
+  /// work.
+  public func cancel() {
+    transition(toState: .canceled)
+  }
+
+  private func transition(toState: State) {
     mu.wait()
-    error = e
-    touch()
+    switch state {
+    case .pending:
+      state = toState
+      touch()
+    default:
+      ()
+    }
     mu.signal()
   }
 
@@ -55,12 +79,14 @@ public class Future<Err, Res> {
     let f = Future<Err, R>()
     DispatchQueue.global(qos: .default).async {
       switch self.wait(timeout: .distantFuture) {
-      case .ok(let data):
-        f.resolve(with: proc(data))
-      case .error(let error):
-        f.reject(with: error)
       case .timedOut:
         preconditionFailure("unreachable")
+      case .canceled:
+        f.cancel()
+      case .error(let error):
+        f.reject(with: error)
+      case .ok(let data):
+        f.resolve(with: proc(data))
       }
     }
     return f
@@ -72,12 +98,14 @@ public class Future<Err, Res> {
     let f = Future<E, Res>()
     DispatchQueue.global(qos: .default).async {
       switch self.wait(timeout: .distantFuture) {
-      case .ok(let data):
-        f.resolve(with: data)
-      case .error(let error):
-        f.reject(with: proc(error))
       case .timedOut:
         preconditionFailure("unreachable")
+      case .canceled:
+        f.cancel()
+      case .error(let error):
+        f.reject(with: proc(error))
+      case .ok(let data):
+        f.resolve(with: data)
       }
     }
     return f
@@ -88,19 +116,23 @@ public class Future<Err, Res> {
     let f = Future<Err, R>()
     DispatchQueue.global(qos: .default).async {
       switch self.wait(timeout: .distantFuture) {
-      case .ok(let data):
-        switch proc(data).wait(timeout: .distantFuture) {
-        case .ok(let res):
-          f.resolve(with: res)
-        case .error(let err):
-          f.reject(with: err)
-        case .timedOut:
-          preconditionFailure("unreachable")
-        }
-      case .error(let err):
-        f.reject(with: err)
       case .timedOut:
         preconditionFailure("unreachable")
+      case .canceled:
+        f.cancel()
+      case .error(let err):
+        f.reject(with: err)
+      case .ok(let data):
+        switch proc(data).wait(timeout: .distantFuture) {
+        case .timedOut:
+          preconditionFailure("unreachable")
+        case .canceled:
+          f.cancel()
+        case .error(let err):
+          f.reject(with: err)
+        case .ok(let res):
+          f.resolve(with: res)
+        }
       }
     }
     return f
@@ -111,6 +143,7 @@ public class Future<Err, Res> {
   /// has no effect.
   public func sink(
     queue: DispatchQueue = DispatchQueue.main,
+    onCancel cancelProc: @escaping () -> Void = { },
     onError errorProc: @escaping (Err) -> Void = { _ in },
     onComplete completeProc: @escaping (Res) -> Void
   ) {
@@ -118,12 +151,14 @@ public class Future<Err, Res> {
       let res = self.wait(timeout: .distantFuture)
       queue.async {
         switch res {
-        case .ok(let res):
-          completeProc(res)
-        case .error(let err):
-          errorProc(err)
         case .timedOut:
           preconditionFailure("unreachable")
+        case .canceled:
+          cancelProc()
+        case .error(let err):
+          errorProc(err)
+        case .ok(let res):
+          completeProc(res)
         }
       }
     }
@@ -142,47 +177,69 @@ public class Future<Err, Res> {
   /// Block the current thread until data is available.
   public func wait() throws -> Res {
     mu.wait()
-    if let d = data {
+    switch state {
+    case .pending:
+      let waiter = DispatchSemaphore(value: 0)
+      waiters.append(waiter)
       mu.signal()
-      return d
-    } else if let e = error {
+      waiter.wait()
+      switch state {
+      case .pending:
+        preconditionFailure("impossible state")
+      case .canceled:
+        throw FutureCanceled()
+      case .ok(let res):
+        return res
+      case .error(let err):
+        throw FutureWaitError(error: err)
+      }
+    case .canceled:
       mu.signal()
-      throw FutureWaitError(error: e)
+      throw FutureCanceled()
+    case .ok(let res):
+      mu.signal()
+      return res
+    case .error(let err):
+      mu.signal()
+      throw FutureWaitError(error: err)
     }
-    let waiter = DispatchSemaphore(value: 0)
-    waiters.append(waiter)
-    mu.signal()
-    waiter.wait()
-    if let d = data {
-      return d
-    }
-    throw FutureWaitError(error: error!)
   }
 
   /// Block the current thread until data is available or the timeout expires.
   public func wait(timeout t: DispatchTime) -> FutureWaitResult<Err, Res> {
     mu.wait()
-    if let d = data {
+    switch state {
+    case .pending:
+      let waiter = DispatchSemaphore(value: 0)
+      waiters.append(waiter)
       mu.signal()
-      return .ok(d)
-    } else if let e = error {
-      mu.signal()
-      return .error(e)
-    }
-    let waiter = DispatchSemaphore(value: 0)
-    waiters.append(waiter)
-    mu.signal()
-    switch waiter.wait(timeout: t) {
-    case .success:
-      if let d = data {
-        return .ok(d)
+      switch waiter.wait(timeout: t) {
+      case .success:
+        switch state {
+        case .pending:
+          preconditionFailure("impossible state")
+        case .canceled:
+          return .canceled
+        case .error(let err):
+          return .error(err)
+        case .ok(let res):
+          return .ok(res)
+        }
+      case .timedOut:
+        mu.wait()
+        waiters.removeAll { $0 == waiter }
+        mu.signal()
+        return .timedOut
       }
-      return .error(error!)
-    case .timedOut:
-      mu.wait()
-      waiters.removeAll { $0 == waiter }
+    case .canceled:
       mu.signal()
-      return .timedOut
+      return .canceled
+    case .error(let err):
+      mu.signal()
+      return .error(err)
+    case .ok(let res):
+      mu.signal()
+      return .ok(res)
     }
   }
 }
