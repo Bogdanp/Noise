@@ -129,4 +129,19 @@ class SerdeTests: XCTestCase {
       let _ = String.read(from: inp, using: &buf)
     }
   }
+
+  func testDictionaryRoundtrip() {
+    let p = Pipe()
+    let v = [
+      "a": UVarint(42),
+      "b": UVarint(10)
+    ]
+    let inp = InputPort(withHandle: p.fileHandleForReading)
+    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    var buf = Data(count: 8192)
+    v.write(to: out)
+    out.flush()
+    let r = [String: UVarint].read(from: inp, using: &buf)
+    XCTAssertEqual(v, r)
+  }
 }

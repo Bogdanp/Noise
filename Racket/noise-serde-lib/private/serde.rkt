@@ -319,6 +319,7 @@
 ;; field ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (provide
+ HashTable
  Listof
  Optional
  Record
@@ -432,6 +433,31 @@
        (unless (field-type? t)
          (raise-argument-error who "(or/c field-type? record-info?)" t)))]))
 
+(define (HashTable k v)
+  (let ([k (->field-type 'HashTable k)]
+        [v (->field-type 'HashTable v)])
+    (define k-read-proc (field-type-read-proc k))
+    (define v-read-proc (field-type-read-proc v))
+    (define k-write-proc (field-type-write-proc k))
+    (define v-write-proc (field-type-write-proc v))
+    (define k-swift-type ((field-type-swift-proc k)))
+    (define v-swift-type ((field-type-swift-proc v)))
+    (field-type
+     (λ (in)
+       (for/hash ([_ (in-range (read-varint in))])
+         (values
+          (k-read-proc in)
+          (v-read-proc in))))
+     (λ (h out)
+       (write-varint (hash-count h) out)
+       (for ([(k v) (in-hash h)])
+         (k-write-proc k out)
+         (v-write-proc v out)))
+     (λ ()
+       (format "[~a: ~a]"
+               k-swift-type
+               v-swift-type)))))
+
 (define (Listof t)
   (let ([t (->field-type 'Listof t)])
     (define read-proc (field-type-read-proc t))
@@ -493,17 +519,18 @@
     (define bs (with-output-to-bytes (λ () (write-record Example v))))
     (check-equal? v (read-record Example (open-input-bytes bs))))
 
-  (test-case "homogeneous list serde"
+  (test-case "container serde"
     (define-record Story
       [id : UVarint #:contract exact-integer?]
       [title : String #:contract string?]
-      [comments : (Listof UVarint) #:contract (listof exact-integer?)])
+      [comments : (Listof UVarint) #:contract (listof exact-integer?)]
+      [metadata : (HashTable Symbol String) #:contract (hash/c symbol? string?)])
     (define-record Stories
       [stories : (Listof Story) #:contract (listof Story?)])
     (define v
       (Stories
-       (list (Story 0 "a" null)
-             (Story 1 "b" '(1 2 3)))))
+       (list (Story 0 "a" null (hash 'a "a" 'b "b"))
+             (Story 1 "b" '(1 2 3) (hash 'c "def")))))
     (define bs (with-output-to-bytes (λ () (write-record Stories v))))
     (check-equal? v (read-record Stories (open-input-bytes bs))))
 

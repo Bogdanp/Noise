@@ -21,6 +21,7 @@
  UInt16
  UInt32
  UVarint
+ HashTable
  Listof
  Optional
  String

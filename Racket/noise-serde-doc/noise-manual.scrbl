@@ -149,6 +149,18 @@ deserialized.
   @tt{Int64} and @tt{UInt64}.
 }
 
+@defproc[(HashTable [k (or/c field-type? enum-info? record-info?)]
+                    [v (or/c field-type? enum-info? record-info?)]) field-type?]{
+  A constructor for @tech{field types} that represent hash tables
+  composed of @racket[k] keys and @racket[v] values.  In Swift, these
+  values are represented by @tt{Dictionary} values parameterized over
+  the Swift representations of the @racket[k] and @racket[v] types,
+  respectively.
+
+  When @racket[k] is an enum or a record type, the enum or record must
+  be extended to implement the @tt{Hashable} protocol in Swift.
+}
+
 @defproc[(Listof [t (or/c field-type? enum-info? record-info?)]) field-type?]{
   A constructor for @tech{field types} that represent lists composed
   of @racket[field-type] values.  In Swift, these values are

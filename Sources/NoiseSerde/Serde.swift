@@ -10,6 +10,7 @@ public protocol Writable {
   func write(to out: OutputPort)
 }
 
+// MARK: - Bool
 extension Bool: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Bool {
     return inp.readByte() == 1
@@ -20,6 +21,7 @@ extension Bool: Readable, Writable {
   }
 }
 
+// MARK: - Data
 extension Data: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Data {
     let vlen = Varint.read(from: inp, using: &buf)
@@ -44,6 +46,7 @@ extension Data: Readable, Writable {
   }
 }
 
+// MARK: - Float32
 extension Float32: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Float32 {
     return Float32(bitPattern: (
@@ -63,6 +66,7 @@ extension Float32: Readable, Writable {
   }
 }
 
+// MARK: - Float64
 extension Float64: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Float64 {
     return Float64(bitPattern: (
@@ -90,6 +94,7 @@ extension Float64: Readable, Writable {
   }
 }
 
+// MARK: - Int16
 extension Int16: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Int16 {
     return Int16(bitPattern: (
@@ -104,6 +109,7 @@ extension Int16: Readable, Writable {
   }
 }
 
+// MARK: - Int32
 extension Int32: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Int32 {
     return Int32(bitPattern: (
@@ -122,6 +128,7 @@ extension Int32: Readable, Writable {
   }
 }
 
+// MARK: - UInt16
 extension UInt16: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> UInt16 {
     return UInt16(bitPattern: (
@@ -136,6 +143,7 @@ extension UInt16: Readable, Writable {
   }
 }
 
+// MARK: - UInt32
 extension UInt32: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> UInt32 {
     return UInt32(bitPattern: (
@@ -154,6 +162,7 @@ extension UInt32: Readable, Writable {
   }
 }
 
+// MARK: - Varint
 public typealias Varint = Int64
 
 extension Varint: Readable, Writable {
@@ -191,6 +200,7 @@ extension Varint: Readable, Writable {
   }
 }
 
+// MARK: - UVarint
 public typealias UVarint = UInt64
 
 extension UVarint: Readable, Writable {
@@ -225,6 +235,7 @@ extension UVarint: Readable, Writable {
   }
 }
 
+// MARK: - String
 extension String: Readable, Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> String {
     let vlen = Varint.read(from: inp, using: &buf)
@@ -251,8 +262,10 @@ extension String: Readable, Writable {
   }
 }
 
+// MARK: - Symbol
 public typealias Symbol = String
 
+// MARK: - Array
 extension Array where Element: Readable, Element: Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> [Element] {
     let len = Varint.read(from: inp, using: &buf)
@@ -276,6 +289,34 @@ extension Array where Element: Readable, Element: Writable {
   }
 }
 
+// MARK: - Dictionary
+extension Dictionary where Key: Readable, Key: Writable, Value: Readable, Value: Writable {
+  public static func read(from inp: InputPort, using buf: inout Data) -> [Key: Value] {
+    let len = Varint.read(from: inp, using: &buf)
+    assert(len >= 0)
+    if len == 0 {
+      return [:]
+    }
+    var res = [Key: Value]()
+    res.reserveCapacity(Int(len))
+    for _ in 0..<len {
+      let k = Key.read(from: inp, using: &buf)
+      let v = Value.read(from: inp, using: &buf)
+      res[k] = v
+    }
+    return res
+  }
+
+  public func write(to out: OutputPort) {
+    Varint(count).write(to: out)
+    for (k, v) in self {
+      k.write(to: out)
+      v.write(to: out)
+    }
+  }
+}
+
+// MARK: - Optional
 extension Optional where Wrapped: Readable, Wrapped: Writable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Wrapped? {
     if inp.readByte() == 0 {
@@ -295,6 +336,7 @@ extension Optional where Wrapped: Readable, Wrapped: Writable {
   }
 }
 
+// MARK: - Data
 fileprivate extension Data {
   mutating func grow(upTo n: Int) {
     let want = n - count
