@@ -1,6 +1,6 @@
 #lang info
 
-(define version "0.1")
+(define version "0.2")
 (define collection "noise")
 (define deps '("base"))
 (define build-deps '("rackunit-lib"))
