@@ -40,7 +40,7 @@
 
 (struct record-info ([id #:mutable] name constructor fields)
   #:property prop:procedure (struct-field-index constructor))
-(struct record-field (id type accessor))
+(struct record-field (id type mutable? accessor))
 
 (define record-infos (make-hasheqv))
 (define record-info-sequencer
@@ -52,19 +52,25 @@
 (define-syntax (define-record stx)
   (define (id-stx->keyword stx)
     (datum->syntax stx (string->keyword (symbol->string (syntax-e stx)))))
+  (define (stx->bool-stx stx)
+    (datum->syntax stx (and (syntax-e stx) #t)))
 
   (define-syntax-class record-field
     #:literals (:)
-    (pattern [id:id : ft:expr {~optional {~seq #:contract ctc-expr:expr}}]
+    (pattern [id:id : ft:expr {~alt {~optional {~and #:mutable mutable}}
+                                    {~optional {~seq #:contract ctc-expr:expr}}} ...]
              #:with kwd (id-stx->keyword #'id)
              #:with arg #'id
-             #:with opt? #f
-             #:with ctc #'{~? ctc-expr any/c})
-    (pattern [(id:id def:expr) : ft:expr {~optional {~seq #:contract ctc-expr:expr}}]
+             #:with ctc #'{~? ctc-expr any/c}
+             #:with opt? #'#f
+             #:with mut? (stx->bool-stx #'{~? mutable #f}))
+    (pattern [(id:id def:expr) : ft:expr {~alt {~optional {~and #:mutable mutable}}
+                                               {~optional {~seq #:contract ctc-expr:expr}}} ...]
              #:with kwd (id-stx->keyword #'id)
              #:with arg #'[id def]
-             #:with opt? #t
-             #:with ctc #'{~? ctc-expr any/c}))
+             #:with ctc #'{~? ctc-expr any/c}
+             #:with opt? #'#t
+             #:with mut? (stx->bool-stx #'{~? mutable #f})))
 
   (syntax-parse stx
     [(_ name:id fld:record-field ...)
@@ -118,7 +124,7 @@
                (struct-copy name r [fld.id v])) ...
              (values name name? fld-accessor-id ... fld-setter-id ...)))
          (define info
-           (let ([fields (list (record-field 'fld.id (->field-type 'Record fld.ft) fld-accessor-id) ...)])
+           (let ([fields (list (record-field 'fld.id (->field-type 'Record fld.ft) fld.mut? fld-accessor-id) ...)])
              (record-info #f 'name -name fields)))
          (sequencer-add! record-info-sequencer info)
          (define/contract (constructor-id constructor-arg ...)

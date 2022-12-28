@@ -144,7 +144,8 @@
   (fprintf out "public struct ~a: Readable, Writable {~n" name)
   (for ([f (in-list fields)])
     (fprintf out
-             "  public let ~a: ~a~n"
+             "  public ~a ~a: ~a~n"
+             (if (record-field-mutable? f) "var" "let")
              (~camel-case (record-field-id f))
              (swift-type (record-field-type f))))
 

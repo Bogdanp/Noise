@@ -39,10 +39,10 @@ definitions for records reachable from a given root module.
     #:literals (:)
     (define-record name
       field ...)
-    #:grammar ([field [field-id : field-type]
-                      [field-id : field-type #:contract field-ctc-expr]
-                      [(field-id default-expr) : field-type]
-                      [(field-id default-expr) : field-type #:contract field-ctc-expr]])
+    #:grammar ([field [field-id : field-type field-option ...]
+                      [(field-id default-expr) : field-type field-option ...]]
+               [field-option (code:line #:mutable)
+                             (code:line #:contract field-ctc-expr)])
     #:contracts ([field-type (or/c field-type? enum-info? record-info?)])]
 )]{
 
@@ -50,9 +50,12 @@ definitions for records reachable from a given root module.
   @racket[field]s.  Records are backed by structs and generate smart
   constructors that take a keyword argument for every field.  Smart
   constructors are named by prepending @tt{make-} to the record name
-  and bound at phase level 0.
+  and bound at phase level 0.  Record @racket[name]s must be unique
+  across all modules.
 
-  Record @racket[name]s must be unique across all modules.
+  When a field is @racket[#:mutable], it uses @tt{var} as its
+  introducer in Swift instead of @tt{let}.  The option currently has
+  no effect on the generated Racket code.
 
   @examples[
     #:eval ev
