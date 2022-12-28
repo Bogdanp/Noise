@@ -68,6 +68,10 @@ definitions for records reachable from a given root module.
      #:age 30)
     Human
   ]
+
+  @history[
+    #:changed "0.3" @elem{Added the @racket[#:mutable] field option.}
+  ]
 }
 
 @defform[(record-out id)]{
