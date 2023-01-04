@@ -24,8 +24,15 @@ public class Future<Err, Res> {
   public struct Canceled: Error {}
 
   /// Thrown by `Future.wait` on error.
-  public struct WaitError<Err>: Error {
+  public struct WaitError<Err>: LocalizedError {
     let error: Err
+
+    public var errorDescription: String? {
+      if let err = error as? String {
+        return err
+      }
+      return "\(error)"
+    }
   }
 
   /// Represents the disjoint result values that may be returned by
