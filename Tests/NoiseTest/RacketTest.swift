@@ -30,8 +30,10 @@ class RacketTest: XCTestCase {
     r.bracket {
       let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("fib"), Val.null))
       let fib = r.require(Val.symbol("fib"), from: mod).car()!
-      let n = fib.apply(Val.cons(Val.fixnum(8), Val.null))!
-      XCTAssertEqual(n.car()!.fixnum(), 21)
+      XCTAssertEqual(fib.apply(Val.cons(Val.fixnum(0), Val.null))!.car()!.fixnum(), 0)
+      XCTAssertEqual(fib.apply(Val.cons(Val.fixnum(1), Val.null))!.car()!.fixnum(), 1)
+      XCTAssertEqual(fib.apply(Val.cons(Val.fixnum(2), Val.null))!.car()!.fixnum(), 1)
+      XCTAssertEqual(fib.apply(Val.cons(Val.fixnum(8), Val.null))!.car()!.fixnum(), 21)
     }
   }
 

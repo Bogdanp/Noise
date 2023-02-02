@@ -100,20 +100,20 @@ public struct Racket {
 /// helpers should mainly be used to create data to be passed into
 /// Racket, and to copy data from Racket within activated threads.
 public struct Val {
-  let ptr: ptr
+  let ptr: ptr?
 
   /// The empty list.
-  public static let null = Val(ptr: racket_nil()!)
+  public static let null = Val(ptr: racket_nil())
 
   /// The true value.
-  public static let f = Val(ptr: racket_false()!)
+  public static let f = Val(ptr: racket_false())
 
   /// The false value.
-  public static let t = Val(ptr: racket_true()!)
+  public static let t = Val(ptr: racket_true())
 
   /// Creates a Chez Scheme fixnum.
   public static func fixnum(_ i: Int) -> Val {
-    return Val(ptr: racket_fixnum(i));
+    return Val(ptr: racket_fixnum(i))
   }
 
   /// Creates a Chez Scheme symbol by copying a String.

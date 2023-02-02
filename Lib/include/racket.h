@@ -36,15 +36,15 @@ ptr racket_true() {
   return Strue;
 }
 
-int racket_fixnump(ptr p) {
+int racket_fixnump(ptr _Nullable p) {
   return Sfixnump(p);
 }
 
-ptr racket_fixnum(iptr i) {
+ptr _Nullable racket_fixnum(iptr i) {
   return Sfixnum(i);
 }
 
-iptr racket_fixnum_value(ptr p)  {
+iptr racket_fixnum_value(ptr _Nullable p)  {
   return Sfixnum_value(p);
 }
 
