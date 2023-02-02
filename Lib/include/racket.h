@@ -1,3 +1,6 @@
+#ifndef RACKET_H
+#define RACKET_H
+
 #if defined(__x86_64__)
 # include "chezscheme-x86_64-macos.h"
 #elif defined(__arm64__)
@@ -24,15 +27,15 @@ void racket_destroy() {
   return Sscheme_deinit();
 }
 
-ptr racket_nil() {
+ptr _Nonnull racket_nil() {
   return Snil;
 }
 
-ptr racket_false() {
+ptr _Nonnull racket_false() {
   return Sfalse;
 }
 
-ptr racket_true() {
+ptr _Nonnull racket_true() {
   return Strue;
 }
 
@@ -48,50 +51,52 @@ iptr racket_fixnum_value(ptr _Nullable p)  {
   return Sfixnum_value(p);
 }
 
-ptr racket_symbol(const char *s) {
+ptr _Nonnull racket_symbol(const char * _Nonnull s) {
   return Sstring_to_symbol(s);
 }
 
-ptr racket_string(const char *s, uptr len) {
+ptr _Nonnull racket_string(const char * _Nonnull s, uptr len) {
   return Sstring_utf8(s, len);
 }
 
-int racket_pairp(ptr p) {
+int racket_pairp(ptr _Nullable p) {
   return Spairp(p);
 }
 
-ptr racket_cons(ptr a, ptr b) {
+ptr _Nonnull racket_cons(ptr _Nullable a, ptr _Nullable b) {
   return Scons(a, b);
 }
 
-ptr racket_car(ptr l) {
+ptr _Nullable racket_car(ptr _Nonnull l) {
   return Scar(l);
 }
 
-ptr racket_cdr(ptr l) {
+ptr _Nullable racket_cdr(ptr _Nonnull l) {
   return Scdr(l);
 }
 
-int racket_procedurep(ptr p) {
+int racket_procedurep(ptr _Nullable p) {
   return Sprocedurep(p);
 }
 
-int racket_bytevectorp(ptr p) {
+int racket_bytevectorp(ptr _Nullable p) {
   return Sbytevectorp(p);
 }
 
-uptr racket_bytevector_length(ptr p) {
+uptr racket_bytevector_length(ptr _Nonnull p) {
   return Sbytevector_length(p);
 }
 
-unsigned char *racket_bytevector_data(ptr p) {
+unsigned char * _Nonnull racket_bytevector_data(ptr _Nonnull p) {
   return (unsigned char *)Sbytevector_data(p);
 }
 
-void racket_lock_object(ptr o) {
+void racket_lock_object(ptr _Nonnull o) {
   Slock_object(o);
 }
 
-void racket_unlock_object(ptr o) {
+void racket_unlock_object(ptr _Nonnull o) {
   Sunlock_object(o);
 }
+
+#endif

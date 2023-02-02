@@ -6,4 +6,4 @@ mods.zo: *.rkt
 
 .PHONY: clean
 clean:
-	rm mods.zo
+	rm -f mods.zo

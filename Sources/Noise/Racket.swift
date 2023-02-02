@@ -121,7 +121,7 @@ public struct Val {
     let c = s.utf8CString.cstring()
     let p = racket_symbol(c)
     c.deallocate()
-    return Val(ptr: p!)
+    return Val(ptr: p)
   }
 
   /// Creates a Chez Scheme string by copying a regular String.
@@ -130,7 +130,7 @@ public struct Val {
     let c = utf8.cstring()
     let p = racket_string(c, UInt(utf8.underestimatedCount - 1))
     c.deallocate()
-    return Val(ptr: p!)
+    return Val(ptr: p)
   }
 
   /// Creates a pair of two Values.
@@ -138,14 +138,16 @@ public struct Val {
     return Val(ptr: racket_cons(a.ptr, b.ptr))
   }
 
-  /// Locks the value to prevent the GC from moving it.
+  /// Locks the value to prevent the GC from moving it.  Panics if
+  /// called with an immediate value.
   public func lock() {
-    racket_lock_object(ptr)
+    racket_lock_object(ptr!)
   }
 
-  /// Unlocks the value to let the GC move it.
+  /// Unlocks the value to let the GC move it.  Panics if called with
+  /// an immediate value.
   public func unlock() {
-    racket_unlock_object(ptr)
+    racket_unlock_object(ptr!)
   }
 
   /// Applies the value using `args`.
@@ -181,13 +183,13 @@ public struct Val {
   /// Returns the `car` of a pair, panicking if the value is not a
   /// pair.
   public func unsafeCar() -> Val {
-    return Val(ptr: racket_car(ptr))
+    return Val(ptr: racket_car(ptr!))
   }
 
   /// Returns the `cdr` of a pair, panicking if the value is not a
   /// pair.
   public func unsafeCdr() -> Val {
-    return Val(ptr: racket_cdr(ptr))
+    return Val(ptr: racket_cdr(ptr!))
   }
 
   /// Extracts the integer value of a fixnum.
@@ -237,8 +239,8 @@ public struct Val {
   /// When the `nulTerminated` argument is `true`, the bytevector will
   /// contain an extra 0 byte at the end.
   public func unsafeBytevector(nulTerminated: Bool = false) -> [CChar] {
-    let len = Int(racket_bytevector_length(ptr))
-    let data = racket_bytevector_data(ptr)!
+    let len = Int(racket_bytevector_length(ptr!))
+    let data = racket_bytevector_data(ptr!)
     var res = Array<CChar>(repeating: 0, count: nulTerminated ? len+1 : len)
     res.withUnsafeMutableBytes { dst in
       dst.copyBytes(from: UnsafeRawBufferPointer(start: data, count: Int(len)))

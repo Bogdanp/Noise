@@ -1,4 +1,4 @@
 module RacketCS {
-    umbrella header "racket.h"
+    header "racket.h"
     export *
 }
