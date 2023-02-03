@@ -5,6 +5,7 @@
          racket/string
          threading
          "private/backend.rkt"
+         "private/callout.rkt"
          "private/serde.rkt")
 
 (provide
@@ -43,6 +44,7 @@
   (fprintf out "  init(withZo zo: URL, andMod mod: String, andProc proc: String) {~n")
   (fprintf out "    impl = NoiseBackend.Backend(withZo: zo, andMod: mod, andProc: proc)~n")
   (fprintf out "  }~n")
+
   (define sorted-rpc-ids (sort (hash-keys rpc-infos) <))
   (for ([id (in-list sorted-rpc-ids)])
     (match-define (rpc-info _ name args type _proc)
@@ -74,6 +76,31 @@
        (fprintf out "      }~n")])
     (fprintf out "    )~n")
     (fprintf out "  }~n"))
+
+  (define sorted-callout-ids (sort (hash-keys callout-infos) <))
+  (for ([id (in-list sorted-callout-ids)])
+    (match-define (callout-info _ name args _cbox)
+      (hash-ref callout-infos id))
+    (define proc-name (~name name))
+    (define proc-type
+      (format "@escaping (~a) -> Void"
+              (string-join
+               (map (compose1 swift-type callout-arg-type) args)
+               ", ")))
+    (fprintf out "~n")
+    (fprintf out "  public func installCallback(~a proc: ~a) -> Future<String, Void> {~n" proc-name proc-type)
+    (fprintf out "    return NoiseBackend.installCallback(id: ~a, rpc: self.installCallback(internalWithId:andAddr:)) { inp in~n" id)
+    (fprintf out "      var buf = Data(count: 8*1024)~n")
+    (fprintf out "      proc(~n")
+    (define last-idx (sub1 (length args)))
+    (for ([(arg idx) (in-indexed (in-list args))])
+      (match-define (callout-arg _name type) arg)
+      (define maybe-comma (if (= idx last-idx) "" ","))
+      (fprintf out "        ~a.read(from: inp, using: &buf)~a~n" (swift-type type) maybe-comma))
+    (fprintf out "      )~n")
+    (fprintf out "    }~n")
+    (fprintf out "  }~n"))
+
   (fprintf out "}~n"))
 
 (define (write-enum-code e [out (current-output-port)])

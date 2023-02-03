@@ -1,7 +1,8 @@
 #lang racket/base
 
 (require (for-syntax racket/base
-                     syntax/parse)
+                     syntax/parse
+                     "common.rkt")
          "sequencer.rkt"
          "serde.rkt")
 
@@ -23,10 +24,6 @@
    set-rpc-info-id!))
 
 (begin-for-syntax
-  (define (valid-name? id-stx)
-    (define id-str (symbol->string (syntax-e id-stx)))
-    (regexp-match? #rx"^[_a-zA-Z][_a-zA-Z0-9-]*$" id-str))
-
   (define-syntax-class arg
     #:literals (:)
     (pattern [name:id : type:expr] #:with label #'_)
@@ -36,9 +33,9 @@
   (syntax-parse stx
     #:literals (:)
     [(_ (name:id arg:arg ... {~optional {~seq : type:expr}}) body ...+)
-     #:fail-unless (valid-name? #'name)
+     #:fail-unless (valid-name-stx? #'name)
      "RPC names may only contain alphanumeric characters, dashes and underscores"
-     #:fail-unless (andmap valid-name? (syntax-e #'(arg.name ...)))
+     #:fail-unless (andmap valid-name-stx? (syntax-e #'(arg.name ...)))
      "RPC labels may only contain alphanumeric characters, dashes and underscores"
      #'(begin
          (define response-type
@@ -47,15 +44,11 @@
            (error 'define-rpc "~e is not a valid response type~n in: ~a" response-type 'name))
          (define (name arg.name ...)
            body ...)
-         (define arg-types
-           (for/list ([n (in-list (list 'arg.name ...))]
-                      [t (in-list (list arg.type ...))])
-             (->field-type 'Backend t)))
          (define args
            (for/list ([l (in-list (list 'arg.label ...))]
                       [n (in-list (list 'arg.name ...))]
-                      [t (in-list arg-types)])
-             (rpc-arg l n t)))
+                      [t (in-list (list arg.type ...))])
+             (rpc-arg l n (->field-type 'Backend t))))
          (define info
            (rpc-info #f 'name args response-type name))
          (sequencer-add! rpc-info-sequencer info))]))

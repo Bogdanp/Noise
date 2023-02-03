@@ -199,14 +199,13 @@ ids to handler procedures.
                [response-type-expr (or/c field-type? enum-info? record-info?)])
 ]{
   Defines a procedure named @racket[id] and registers an RPC handler
-  for it in the @tech{handler registry}.
+  for it in the @tech{handler registry}.  RPC @racket[id]s must be
+  unique across all modules.
 
   The @tt{noise-serde-codegen} command automatically generates Swift
   code to handle calling these procedures.  In Swift, the RPC
   @racket[id], @racket[arg-label]s and @racket[arg-id]s are converted
   to camel case.  The @racket[arg-label]s have no meaning in Racket.
-
-  RPC @racket[id]s must be unique across all modules.
 
   @examples[
     #:eval ev
@@ -217,6 +216,35 @@ ids to handler procedures.
       (Human-name h))
     (get-human-name (make-Human #:name "Bogdan" #:age 30))
   ]
+}
+
+@defform[
+  #:literals (:)
+  (define-callout (id arg ...))
+  #:grammar [(arg [arg-id : arg-type-expr])]
+  #:contracts ([arg-type-expr (or/c field-type? enum-info? record-info?)])
+]{
+  Defines a foreign procedure named @racket[id].  Callout @racket[id]s
+  must be unique across all modules.
+
+  The @tt{noise-serde-codegen} command automatically generates Swift
+  code to handle installing Swift procedures for each callout.
+
+  @examples[
+    #:eval ev
+    (define-callout (hello-cb [h : Human]))
+  ]
+
+  In Racket, the above example binds a procedure named @racket[hello]
+  that may be called with a @racket[Human] value in order to execute a
+  Swift procedure.  In Swift, the generated backend will contain a
+  procedure with the following signature:
+
+  @verbatim{installCallback(helloCb: @"@"escaping (Human) -> Void) -> Future<String, Void>}
+
+  That procedure can be used to install a callback from the Swift
+  side.  Executing a callout on the Racket side before it's been
+  installed from the Swift side raises an exception.
 }
 
 @defproc[(serve [in-fd exact-integer?]

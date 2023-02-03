@@ -3,10 +3,13 @@
 (require ffi/unsafe/port
          racket/match
          "private/backend.rkt"
+         "private/callout.rkt"
          "private/debug.rkt"
-         "private/serde.rkt")
+         "private/serde.rkt"
+         "unsafe/callout.rkt")
 
 (provide
+ define-callout
  define-rpc
  serve)
 
@@ -92,3 +95,11 @@
     (thread-send thd '(stop))
     (thread-wait thd)
     (custodian-shutdown-all cust)))
+
+
+;; callout ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-rpc (install-callback [internalWithId id : UVarint]
+                              [andAddr addr : Varint])
+  (define cbox (callout-info-cbox (hash-ref callout-infos id)))
+  (callout-box-install! cbox addr))

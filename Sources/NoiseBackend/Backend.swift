@@ -31,10 +31,10 @@ public class Backend {
   private var totalReadNanos = UInt64(0)
   private var totalWriteNanos = UInt64(0)
 
-  public init(withZo zo: URL, andMod mod: String, andProc proc: String) {
+  public init(withZo zo: URL, andMod modname: String, andProc proc: String) {
     out = OutputPort(withHandle: ip.fileHandleForWriting)
     Thread.detachNewThread {
-      self.serve(zo, mod, proc)
+      self.serve(zo, modname, proc)
     }
     let reader = Thread {
       self.read()
@@ -43,14 +43,15 @@ public class Backend {
     reader.start()
   }
 
-  private func serve(_ zo: URL, _ mod: String, _ proc: String) {
+  private func serve(_ zo: URL, _ modname: String, _ proc: String) {
     let r = Racket(execPath: zo.path)
     r.bracket {
       r.load(zo: zo)
-      let serve = r.require(Val.symbol(proc), from: Val.cons(Val.symbol("quote"), Val.cons(Val.symbol(mod), Val.null))).car()!
+      let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol(modname), Val.null))
       let ifd = Val.fixnum(Int(ip.fileHandleForReading.fileDescriptor))
       let ofd = Val.fixnum(Int(op.fileHandleForWriting.fileDescriptor))
-      let _ = serve.apply(Val.cons(ifd, Val.cons(ofd, Val.null)))!
+      let serve = r.require(Val.symbol(proc), from: mod).unsafeCar()
+      serve.unsafeApply(Val.cons(ifd, Val.cons(ofd, Val.null)))
       preconditionFailure("Racket server exited")
     }
   }
