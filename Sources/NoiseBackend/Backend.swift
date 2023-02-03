@@ -33,12 +33,15 @@ public class Backend {
 
   public init(withZo zo: URL, andMod modname: String, andProc proc: String) {
     out = OutputPort(withHandle: ip.fileHandleForWriting)
-    Thread.detachNewThread {
+    let server = Thread {
       self.serve(zo, modname, proc)
     }
+    server.name = "Noise Backend (Server)"
+    server.start()
     let reader = Thread {
       self.read()
     }
+    reader.name = "Noise Backend (Reader)"
     reader.qualityOfService = .userInteractive
     reader.start()
   }
