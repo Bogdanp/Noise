@@ -72,16 +72,15 @@ class RacketTest: XCTestCase {
 
   func testCallout() {
     r.bracket {
-      let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("callout"), Val.null))
-      mod.lock()
+      let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol("callout"), Val.null)).locked()
       defer { mod.unlock() }
 
-      let install = r.require(Val.symbol("install-callout!"), from: mod).car()!
+      let install = r.require(Val.symbol("install-callout!"), from: mod).unsafeCar()
       let ptr = unsafeBitCast(calloutExampleProc, to: Optional<UnsafeMutableRawPointer>.self)!
-      _ = install.apply(Val.cons(Val.pointer(ptr), Val.null))!
+      install.unsafeApply(Val.cons(Val.pointer(ptr), Val.null))
 
-      let call = r.require(Val.symbol("exec-callout"), from: mod).car()!
-      _ = call.apply(Val.null)!
+      let call = r.require(Val.symbol("exec-callout"), from: mod).unsafeCar()
+      call.unsafeApply(Val.null)
     }
     XCTAssertEqual(calloutResult, "hello")
   }

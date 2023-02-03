@@ -35,6 +35,10 @@ jobs:
       - name: Pull LFS
         run: git lfs pull
 
+      - name: Install noise-serde-lib
+        run:
+          pushd Racket && raco pkg install --auto noise-serde-lib/ noise-serde-doc/
+
       - name: Build & Test
         run: |
           make && \
