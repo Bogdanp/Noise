@@ -1,6 +1,5 @@
 import Dispatch
 import Foundation
-import Noise
 import NoiseSerde
 
 public func installCallback(
