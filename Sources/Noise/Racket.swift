@@ -116,6 +116,11 @@ public struct Val {
     return Val(ptr: racket_fixnum(i))
   }
 
+  /// Creates a Chez Scheme integer representing a pointer address.
+  public static func pointer(_ p: UnsafeMutableRawPointer) -> Val {
+    return Val(ptr: racket_pointer(p))
+  }
+
   /// Creates a Chez Scheme symbol by copying a String.
   public static func symbol(_ s: String) -> Val {
     let c = s.utf8CString.cstring()
@@ -150,7 +155,20 @@ public struct Val {
     racket_unlock_object(ptr!)
   }
 
+  /// Like `lock`, but returns the value.
+  public func locked() -> Val {
+    lock()
+    return self
+  }
+
+  /// Like `unlock`, but returns the value.
+  public func unlocked() -> Val {
+    unlock()
+    return self
+  }
+
   /// Applies the value using `args`.
+  @discardableResult
   public func apply(_ args: Val) -> Val? {
     if racket_procedurep(ptr) == 1{
       return unsafeApply(args)
@@ -160,6 +178,7 @@ public struct Val {
 
   /// Applies the value using `args`, panicking if the value is not a
   /// procedure.
+  @discardableResult
   public func unsafeApply(_ args: Val) -> Val {
     return Val(ptr: racket_apply(ptr, args.ptr))
   }

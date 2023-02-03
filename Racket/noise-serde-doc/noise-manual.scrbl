@@ -1,7 +1,9 @@
 #lang scribble/manual
 
 @(require scribble/example
-          (for-label noise/backend
+          (for-label (only-in ffi/unsafe ctype?)
+                     noise/backend
+                     noise/callout
                      noise/serde
                      racket/base
                      racket/contract))
@@ -228,4 +230,35 @@ ids to handler procedures.
   multiple requests may be handled concurrently.
 
   Returns a procedure that stops the server when applied.
+}
+
+
+@section[#:tag "callouts"]{Callouts}
+@defmodule[noise/callout]
+
+The @racketmodname[noise/callout] module provides a facility for
+converting function pointer addresses to callable Racket procedures
+via the FFI.  A @deftech{callout box} is a two-element struct
+containing a C function type and an optional Racket procedure of that
+type.  They start their lifecycle empty and must be filled via calls
+to @racket[callout-box-install!].  Callout boxes are themselves
+callable once filled.
+
+@emph{Warning:} these operations are inherently unsafe and you have to
+take care that the function pointers installed in a box are kept
+immobile during the dynamic extent of that box.
+
+@defproc[(callout-box? [v any/c]) boolean?]{
+  Returns @racket[#t] when @racket[v] is a @tech{callout box}.
+}
+
+@defproc[(make-callout-box [fun-type ctype?]) callout-box?]{
+  Returns a @tech{callout box} with the given function type.
+}
+
+@defproc[(callout-box-install! [b callout-box?]
+                               [p exact-integer?]) void?]{
+
+  Installs the function pointer located at address @racket[p] in
+  @racket[b].
 }

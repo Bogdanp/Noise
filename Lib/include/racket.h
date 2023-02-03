@@ -51,6 +51,10 @@ iptr racket_fixnum_value(ptr _Nullable p)  {
   return Sfixnum_value(p);
 }
 
+ptr _Nullable racket_pointer(ptr _Nullable p) {
+  return Sinteger((iptr)p);
+}
+
 ptr _Nonnull racket_symbol(const char * _Nonnull s) {
   return Sstring_to_symbol(s);
 }
