@@ -34,7 +34,7 @@
      "callout names may only contain alphanumeric characters, dashes and underscores"
      #'(begin
          (define cbox
-           (make-callout-box (_fun _int _size _bytes -> _void)))
+           (make-callout-box callout-type))
          (define (name arg-name ...)
            (do-callout info (list (cons (->field-type 'Callout arg-type) arg-name) ...)))
          (define args
@@ -44,6 +44,9 @@
          (define info
            (callout-info #f 'name args cbox))
          (sequencer-add! callout-info-sequencer info))]))
+
+(define callout-type
+  (_fun _int _size _bytes -> _void))
 
 (define (do-callout info arg-pairs)
   (define id (callout-info-id info))

@@ -19,8 +19,9 @@ fileprivate var callbacksSema = DispatchSemaphore(value: 1)
 fileprivate let callbackHandler: @convention(c) (UInt64, Int, UnsafePointer<CChar>) -> Void = { id, len, ptr in
   let data = Data(bytes: ptr, count: len)
   let pipe = Pipe()
-  DispatchQueue.main.async(qos: .background) {
+  DispatchQueue.global(qos: .background).async {
     try! pipe.fileHandleForWriting.write(contentsOf: data)
+    try! pipe.fileHandleForWriting.close()
   }
   callbacksSema.wait()
   let proc = callbacks[id]
