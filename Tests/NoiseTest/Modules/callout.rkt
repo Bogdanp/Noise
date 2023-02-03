@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require ffi/unsafe
-         noise/callout)
+         noise/unsafe/callout)
 
 (provide
  install-callout!

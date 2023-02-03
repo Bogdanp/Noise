@@ -3,8 +3,8 @@
 @(require scribble/example
           (for-label (only-in ffi/unsafe ctype?)
                      noise/backend
-                     noise/callout
                      noise/serde
+                     noise/unsafe/callout
                      racket/base
                      racket/contract))
 
@@ -234,14 +234,14 @@ ids to handler procedures.
 
 
 @section[#:tag "callouts"]{Callouts}
-@defmodule[noise/callout]
+@defmodule[noise/unsafe/callout]
 
-The @racketmodname[noise/callout] module provides a facility for
-converting function pointer addresses to callable Racket procedures
-via the FFI.  A @deftech{callout box} is a two-element struct
-containing a C function type and an optional Racket procedure of that
-type.  They start their lifecycle empty and must be filled via calls
-to @racket[callout-box-install!].  Callout boxes are themselves
+The @racketmodname[noise/unsafe/callout] module provides a facility
+for converting function pointer addresses to callable Racket
+procedures via the FFI.  A @deftech{callout box} is a two-element
+struct containing a C function type and an optional Racket procedure
+of that type.  They start their lifecycle empty and must be filled via
+calls to @racket[callout-box-install!].  Callout boxes are themselves
 callable once filled.
 
 @emph{Warning:} these operations are inherently unsafe and you have to
