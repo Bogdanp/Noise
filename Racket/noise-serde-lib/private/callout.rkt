@@ -33,14 +33,14 @@
      #:fail-unless (valid-name-stx? #'name)
      "callout names may only contain alphanumeric characters, dashes and underscores"
      #'(begin
-         (define cbox
-           (make-callout-box callout-type))
          (define (name arg-name ...)
            (do-callout info (list (cons (->field-type 'Callout arg-type) arg-name) ...)))
          (define args
            (for/list ([n (in-list (list 'arg-name ...))]
                       [t (in-list (list arg-type ...))])
              (callout-arg n (->field-type 'Callout t))))
+         (define cbox
+           (make-callout-box callout-type))
          (define info
            (callout-info #f 'name args cbox))
          (sequencer-add! callout-info-sequencer info))]))

@@ -18,6 +18,4 @@
   (callout-box type #f))
 
 (define (callout-box-install! b addr)
-  (define p (malloc _intptr))
-  (ptr-set! p _intptr addr)
-  (set-callout-box-proc! b (ptr-ref p (callout-box-type b))))
+  (set-callout-box-proc! b (cast addr _intptr (callout-box-type b))))
