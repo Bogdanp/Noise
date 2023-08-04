@@ -198,14 +198,15 @@ ids to handler procedures.
   #:contracts ([arg-type-expr (or/c field-type? enum-info? record-info?)]
                [response-type-expr (or/c field-type? enum-info? record-info?)])
 ]{
-  Defines a procedure named @racket[id] and registers an RPC handler
-  for it in the @tech{handler registry}.  RPC @racket[id]s must be
-  unique across all modules.
+  Defines a procedure named @racket[id] and registers an RPC handler for
+  it in the @tech{handler registry}. RPC @racket[id]s must be unique
+  across all modules. The procedure is automatically provided in a
+  submodule of the enclosing module named @racket[rpc].
 
-  The @tt{noise-serde-codegen} command automatically generates Swift
-  code to handle calling these procedures.  In Swift, the RPC
-  @racket[id], @racket[arg-label]s and @racket[arg-id]s are converted
-  to camel case.  The @racket[arg-label]s have no meaning in Racket.
+  The @tt{noise-serde-codegen} command automatically generates
+  Swift code to handle calling these procedures. In Swift, the RPC
+  @racket[id], @racket[arg-label]s and @racket[arg-id]s are converted to
+  camel case. The @racket[arg-label]s have no meaning in Racket.
 
   @examples[
     #:eval ev

@@ -37,7 +37,7 @@
      "RPC names may only contain alphanumeric characters, dashes and underscores"
      #:fail-unless (andmap valid-name-stx? (syntax-e #'(arg.name ...)))
      "RPC labels may only contain alphanumeric characters, dashes and underscores"
-     #'(begin
+     #`(begin
          (define response-type
            {~? (->field-type 'Backend type) Void})
          (unless (field-type? response-type)
@@ -51,4 +51,6 @@
              (rpc-arg l n (->field-type 'Backend t))))
          (define info
            (rpc-info #f 'name args response-type name))
-         (sequencer-add! rpc-info-sequencer info))]))
+         (sequencer-add! rpc-info-sequencer info)
+         #,(when (eq? (syntax-local-context) 'module)
+             #'(module+ rpc (provide name))))]))
