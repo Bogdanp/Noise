@@ -24,8 +24,8 @@ public class Future<Err, Res> {
   public struct Canceled: Error {}
 
   /// Thrown by `Future.wait` on error.
-  public struct WaitError<Err>: LocalizedError {
-    let error: Err
+  public struct WaitError<E>: LocalizedError {
+    let error: E
 
     public var errorDescription: String? {
       if let err = error as? String {
@@ -37,11 +37,11 @@ public class Future<Err, Res> {
 
   /// Represents the disjoint result values that may be returned by
   /// calls to `Future.wait(timeout:)`.
-  public enum WaitResult<Err, Res> {
+  public enum WaitResult<E, R> {
     case timedOut
     case canceled
-    case error(Err)
-    case ok(Res)
+    case error(E)
+    case ok(R)
   }
 
   public init() {}
