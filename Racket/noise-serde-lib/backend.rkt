@@ -102,10 +102,13 @@
   (define write-thd
     (thread
      (lambda ()
-       (with-handlers ([exn:fail? (λ (e) (channel-put err-ch e))])
+       (with-handlers ([exn:fail?
+                        (lambda (e)
+                          (close-output-port pipe-out)
+                          (channel-put err-ch e))])
          (unless (eq? type Void)
-           (write-field type data pipe-out)))
-       (close-output-port pipe-out))))
+           (write-field type data pipe-out))
+         (close-output-port pipe-out)))))
   (let write-loop ([status-sent? #f])
     (sync
      (handle-evt
