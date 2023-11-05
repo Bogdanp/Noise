@@ -13,6 +13,7 @@
  field-type?
  Bool
  Bytes
+ Delay
  Float32
  Float64
  Int16

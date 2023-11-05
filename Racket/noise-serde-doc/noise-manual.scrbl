@@ -180,6 +180,13 @@ deserialized.
   A constructor for optional @tech{field types}.
 }
 
+@defform[(Delay t-expr)
+         #:contracts ([t-expr (or/c field-type? enum-info? record-info?)])]{
+  A constructor for a field type that delays the execution of
+  @racket[t-expr] until one of its methods is called. Use this to
+  implement mutually-recursive data types.
+}
+
 
 @section[#:tag "backends"]{Backends}
 @defmodule[noise/backend]
