@@ -1,6 +1,5 @@
 #lang info
 
-(define version "0.1")
 (define collection "noise")
 (define deps '("base"))
 (define build-deps '("base"

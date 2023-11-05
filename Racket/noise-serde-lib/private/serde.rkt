@@ -330,6 +330,7 @@
  Optional
  Record
  Enum
+ Delay
 
  (struct-out field-type)
  read-field
@@ -514,6 +515,17 @@
    (λ (v out) (write-enum-variant v out))
    (λ () (symbol->string (enum-info-name t)))))
 
+(define (Delay* t-proc)
+  (define (force)
+    (->field-type 'Delay (t-proc)))
+  (field-type
+   (λ (in) ((field-type-read-proc (force)) in))
+   (λ (v out) ((field-type-write-proc (force)) v out))
+   (λ () ((field-type-swift-proc (force))))))
+
+(define-syntax-rule (Delay e)
+  (Delay* (λ () e)))
+
 (module+ test
   (test-case "complex field serde"
     (define-record Example
@@ -559,4 +571,25 @@
     (define v
       (C (Result.err "an error")))
     (define bs (with-output-to-bytes (λ () (write-record C v))))
-    (check-equal? v (read-record C (open-input-bytes bs)))))
+    (check-equal? v (read-record C (open-input-bytes bs))))
+
+  (test-case "mutually-recursive types"
+    (define-enum ApplyResult
+      [stack {s : (Delay Stack)}]
+      [text {t : String}])
+    (define-record Stack
+      [direction : Symbol]
+      [children : (Listof ApplyResult)])
+    (define v
+      (ApplyResult.stack
+       (make-Stack
+        #:direction 'horizontal
+        #:children (list
+                    (ApplyResult.text "Hello")
+                    (ApplyResult.stack
+                     (make-Stack
+                      #:direction 'vertical
+                      #:children (list (ApplyResult.text "a")
+                                       (ApplyResult.text "b"))))))))
+    (define bs (with-output-to-bytes (λ () (write-field (Enum ApplyResult) v))))
+    (check-equal? v (read-field (Enum ApplyResult) (open-input-bytes bs)))))
