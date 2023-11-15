@@ -64,7 +64,7 @@ class RacketTest: XCTestCase {
       let content = res.cdr()!.car()!.bytestring()!
       XCTAssertEqual(status, 200)
 
-      let re = try! NSRegularExpression(pattern: "<title>defn.io</title>")
+      let re = try! NSRegularExpression(pattern: "<title>Posts &mdash; defn.io</title>")
       let matches = re.numberOfMatches(in: content, range: NSMakeRange(0, content.count))
       XCTAssertEqual(matches, 1)
     }
