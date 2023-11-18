@@ -11,11 +11,11 @@ project as a local dependency. [Git LFS][LFS] is used to store the
 binary files in `Lib/` and in `Sources/Noise/boot`, so you will need
 have [LFS] installed in order to pull those files.
 
-The shared libraries and the boot files in must match the version of
-Racket you use to compile your Racket code. Most likely, the versions
-of the files checked into the master branch won't match your version of
-Racket. To import your own versions of these files, build Racket from
-source and run:
+The shared libraries and the boot files must match the version of Racket
+you use to compile your Racket code. Most likely, the versions of the
+files checked into the master branch won't match your version of Racket.
+To import your own versions of these files, build Racket from source and
+run:
 
     ./Bin/copy-libs.sh arm64-macos /path/to/src/racket
 
