@@ -27,6 +27,7 @@ following branches:
 
 * `racket-8.10`
 * `racket-8.11`
+* `racket-8.11.1`
 
 See [NoiseBackendExample] for an example application built with Noise.
 
