@@ -3,7 +3,7 @@
 (require (for-syntax racket/base
                      racket/provide-transform
                      racket/syntax
-                     syntax/parse)
+                     syntax/parse/pre)
          racket/contract
          racket/generic
          racket/performance-hint
