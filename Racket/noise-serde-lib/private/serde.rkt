@@ -6,6 +6,7 @@
                      syntax/parse)
          racket/contract
          racket/generic
+         racket/performance-hint
          racket/port
          "sequencer.rkt")
 
@@ -290,15 +291,23 @@
  read-uvarint
  write-uvarint)
 
-(define (write-uvarint v [out (current-output-port)])
+(define-inline (write-uvarint* v out)
+  ;; PERF: It is faster to batch up the bytes and issue a single
+  ;; write to the output port than it is to make many individual
+  ;; writes.
   (define bs
     (let loop ([bs null] [n v])
       (define-values (q r)
         (quotient/remainder n #x80))
       (if (zero? q)
           (apply bytes (reverse (cons r bs)))
-          (loop (cons (bitwise-ior r #x80 r) bs) q))))
+          (loop (cons (bitwise-ior r #x80) bs) q))))
   (write-bytes bs out))
+
+(define (write-uvarint v [out (current-output-port)])
+  (if (< v #x80)
+      (write-byte v out)
+      (write-uvarint* v out)))
 
 (define (read-uvarint [in (current-input-port)])
   (let loop ([s 0])
