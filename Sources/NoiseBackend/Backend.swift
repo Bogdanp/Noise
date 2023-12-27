@@ -73,7 +73,7 @@ public class Backend {
       }
       mu.signal()
       let readDuration = handler.handle(from: inp, using: &buf)
-      logger.debug("took \(readDuration/1000)µs to read response \(id)")
+      logger.debug("took \(Duration(nanos: readDuration), privacy: .public) to read response \(id)")
       mu.wait()
       pending.removeValue(forKey: id)
       let requestDuration = DispatchTime.now().uptimeNanoseconds - handler.time.uptimeNanoseconds
@@ -81,7 +81,7 @@ public class Backend {
       totalWaitNanos += requestDuration
       totalReadNanos += readDuration
       mu.signal()
-      logger.debug("took \(requestDuration/1000/1000)ms to fulfill request \(id)")
+      logger.debug("took \(Duration(nanos: requestDuration), privacy: .public) to fulfill request \(id)")
     }
   }
 
@@ -147,5 +147,20 @@ fileprivate struct ResponseHandlerImpl<T>: ResponseHandler {
       fut.reject(with: String.read(from: inp, using: &buf))
     }
     return DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
+  }
+}
+
+fileprivate struct Duration: CustomStringConvertible {
+  let nanos: UInt64
+
+  var description: String {
+    if nanos > 1_000_000_000 {
+      return "\(nanos/1_000_000_000)s"
+    } else if nanos > 1_000_000 {
+      return "\(nanos/1_000_000)ms"
+    } else if nanos > 1_000 {
+      return "\(nanos/1_000)µs"
+    }
+    return "\(nanos)ns"
   }
 }
