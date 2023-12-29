@@ -4,7 +4,8 @@
                      racket/provide-transform
                      racket/syntax
                      syntax/parse/pre)
-         racket/contract
+         racket/contract/base
+         racket/contract/region
          racket/generic
          racket/performance-hint
          racket/port
