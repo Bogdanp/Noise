@@ -9,8 +9,6 @@
  should-review-syntax?
  review-syntax)
 
-(define-expression-syntax-class expression)
-
 (define (should-review-syntax? stx)
   (syntax-case stx (define-enum define-record define-rpc)
     [(define-enum . _rest) #t]
