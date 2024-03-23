@@ -4,7 +4,8 @@ import PackageDescription
 let package = Package(
   name: "Noise",
   platforms: [
-    .macOS(.v12)
+    .iOS(.v14),
+    .macOS(.v12),
   ],
   products: [
     .library(
@@ -24,7 +25,8 @@ let package = Package(
     .target(
       name: "Noise",
       dependencies: [
-        "RacketCS",
+        .target(name: "RacketCS-ios", condition: .when(platforms: [.iOS])),
+        .target(name: "RacketCS", condition: .when(platforms: [.macOS])),
       ],
       resources: [
         .copy("boot"),
@@ -58,6 +60,10 @@ let package = Package(
     .binaryTarget(
       name: "RacketCS",
       path: "RacketCS.xcframework"
+    ),
+    .binaryTarget(
+      name: "RacketCS-ios",
+      path: "RacketCS-ios.xcframework"
     ),
   ]
 )

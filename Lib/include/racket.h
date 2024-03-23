@@ -4,7 +4,14 @@
 #if defined(__x86_64__)
 # include "chezscheme-x86_64-macos.h"
 #elif defined(__arm64__)
-# include "chezscheme-arm64-macos.h"
+# include "TargetConditionals.h"
+# if TARGET_OS_IPHONE
+#  define _Nonnull
+#  define _Nullable
+#  include "chezscheme-arm64-ios.h"
+# else
+#  include "chezscheme-arm64-macos.h"
+# endif
 #else
 # error "unsupported platform"
 #endif

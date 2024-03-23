@@ -100,7 +100,11 @@ public struct Racket {
 /// helpers should mainly be used to create data to be passed into
 /// Racket, and to copy data from Racket within activated threads.
 public struct Val {
+  #if os(iOS)
+  let ptr: ptr
+  #else
   let ptr: ptr?
+  #endif
 
   /// The empty list.
   public static let null = Val(ptr: racket_nil())
@@ -113,12 +117,20 @@ public struct Val {
 
   /// Creates a Chez Scheme fixnum.
   public static func fixnum(_ i: Int) -> Val {
+    #if os(iOS)
+    return Val(ptr: racket_fixnum(Int64(i)))
+    #else
     return Val(ptr: racket_fixnum(i))
+    #endif
   }
 
   /// Creates a Chez Scheme integer representing a pointer address.
   public static func pointer(_ p: UnsafeMutableRawPointer) -> Val {
+    #if os(iOS)
+    return Val(ptr: racket_pointer(UInt64(UInt(bitPattern: p))))
+    #else
     return Val(ptr: racket_pointer(p))
+    #endif
   }
 
   /// Creates a Chez Scheme symbol by copying a String.
@@ -133,7 +145,11 @@ public struct Val {
   public static func string(_ s: String) -> Val {
     let utf8 = s.utf8CString
     let c = utf8.cstring()
+    #if os(iOS)
+    let p = racket_string(c, UInt64(utf8.underestimatedCount - 1))
+    #else
     let p = racket_string(c, UInt(utf8.underestimatedCount - 1))
+    #endif
     c.deallocate()
     return Val(ptr: p)
   }
@@ -146,13 +162,21 @@ public struct Val {
   /// Locks the value to prevent the GC from moving it.  Panics if
   /// called with an immediate value.
   public func lock() {
+    #if os(iOS)
+    racket_lock_object(ptr)
+    #else
     racket_lock_object(ptr!)
+    #endif
   }
 
   /// Unlocks the value to let the GC move it.  Panics if called with
   /// an immediate value.
   public func unlock() {
+    #if os(iOS)
+    racket_unlock_object(ptr)
+    #else
     racket_unlock_object(ptr!)
+    #endif
   }
 
   /// Like `lock`, but returns the value.
@@ -202,13 +226,21 @@ public struct Val {
   /// Returns the `car` of a pair, panicking if the value is not a
   /// pair.
   public func unsafeCar() -> Val {
+    #if os(iOS)
+    return Val(ptr: racket_car(ptr))
+    #else
     return Val(ptr: racket_car(ptr!))
+    #endif
   }
 
   /// Returns the `cdr` of a pair, panicking if the value is not a
   /// pair.
   public func unsafeCdr() -> Val {
+    #if os(iOS)
+    return Val(ptr: racket_cdr(ptr))
+    #else
     return Val(ptr: racket_cdr(ptr!))
+    #endif
   }
 
   /// Extracts the integer value of a fixnum.
@@ -222,7 +254,11 @@ public struct Val {
   /// Extracts the integer value of a fixnum, panicking if the value
   /// is not a fixnum.
   public func unsafeFixnum() -> Int {
+    #if os(iOS)
+    return Int(racket_fixnum_value(ptr))
+    #else
     return racket_fixnum_value(ptr)
+    #endif
   }
 
   /// Copies a Chez Scheme bytevector value into a String.
@@ -258,8 +294,13 @@ public struct Val {
   /// When the `nulTerminated` argument is `true`, the bytevector will
   /// contain an extra 0 byte at the end.
   public func unsafeBytevector(nulTerminated: Bool = false) -> [CChar] {
+    #if os(iOS)
+    let len = Int(racket_bytevector_length(ptr))
+    let data = racket_bytevector_data(ptr)
+    #else
     let len = Int(racket_bytevector_length(ptr!))
     let data = racket_bytevector_data(ptr!)
+    #endif
     var res = Array<CChar>(repeating: 0, count: nulTerminated ? len+1 : len)
     res.withUnsafeMutableBytes { dst in
       dst.copyBytes(from: UnsafeRawBufferPointer(start: data, count: Int(len)))
