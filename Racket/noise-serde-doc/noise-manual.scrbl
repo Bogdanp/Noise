@@ -180,6 +180,13 @@ deserialized.
   A constructor for optional @tech{field types}.
 }
 
+@defproc[(StringConvertible [string-> (-> string? any/c)]
+                            [->string (-> any/c string?)]) field-type?]{
+  Like @racket[String], but converts the value to a string using
+  @racket[->string] before sending it to a client and converts strings
+  to values using @racket[string->] when receiving data from a client.
+}
+
 @defform[(Delay t-expr)
          #:contracts ([t-expr (or/c field-type? enum-info? record-info?)])]{
   A constructor for a field type that delays the execution of
