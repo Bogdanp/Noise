@@ -96,6 +96,13 @@ public struct Racket {
 
 /// An unsafe wrapper for Chez Scheme values.
 ///
+/// - Note: On macOS x86_64 and aarch64, `ptr` values are real OS
+/// pointers represented as `void *`s. On iOS, we use the portable
+/// bytecode interpreter, so pointers are represented as `unsigned
+/// long long`s. For now, we handle the difference here using platform
+/// conditionals. If ever we're able to use native code on iOS, that'll
+/// have to change at least.
+///
 /// - Warning: Values may be moved by the GC at any time, so these
 /// helpers should mainly be used to create data to be passed into
 /// Racket, and to copy data from Racket within activated threads.
