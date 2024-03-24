@@ -26,7 +26,7 @@ let package = Package(
       name: "Noise",
       dependencies: [
         .target(name: "RacketCS-ios", condition: .when(platforms: [.iOS])),
-        .target(name: "RacketCS", condition: .when(platforms: [.macOS])),
+        .target(name: "RacketCS-macos", condition: .when(platforms: [.macOS])),
       ],
       resources: [
         .copy("boot"),
@@ -58,12 +58,12 @@ let package = Package(
       ]
     ),
     .binaryTarget(
-      name: "RacketCS",
-      path: "RacketCS.xcframework"
-    ),
-    .binaryTarget(
       name: "RacketCS-ios",
       path: "RacketCS-ios.xcframework"
+    ),
+    .binaryTarget(
+      name: "RacketCS-macos",
+      path: "RacketCS-macos.xcframework"
     ),
   ]
 )
