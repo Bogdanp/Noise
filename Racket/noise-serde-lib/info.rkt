@@ -1,6 +1,6 @@
 #lang info
 
-(define version "0.5")
+(define version "0.6")
 (define collection "noise")
 (define deps '("base"
                "threading-lib"))
