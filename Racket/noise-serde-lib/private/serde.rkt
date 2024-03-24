@@ -341,6 +341,7 @@
  Record
  Enum
  Delay
+ StringConvertible
 
  (struct-out field-type)
  read-field
@@ -535,6 +536,12 @@
 
 (define-syntax-rule (Delay e)
   (Delay* (λ () e)))
+
+(define (StringConvertible string-> ->string)
+  (field-type
+   (λ (in) (string-> ((field-type-read-proc String) in)))
+   (λ (v out) ((field-type-write-proc String) (->string v) out))
+   (λ () ((field-type-swift-proc String)))))
 
 (module+ test
   (test-case "complex field serde"

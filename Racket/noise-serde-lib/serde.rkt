@@ -26,4 +26,5 @@
  Listof
  Optional
  String
+ StringConvertible
  Symbol)
