@@ -25,9 +25,10 @@ Silicon Mac or `x86_64-macos` if you're on an Intel Mac.
 Pre-compiled builds for recent versions of Racket are available on the
 following branches:
 
-* `racket-8.10`
-* `racket-8.11`
+* `racket-8.12`
 * `racket-8.11.1`
+* `racket-8.11`
+* `racket-8.10`
 
 See [NoiseBackendExample] for an example application built with Noise.
 
