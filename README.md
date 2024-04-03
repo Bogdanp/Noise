@@ -19,8 +19,13 @@ run:
 
     ./Bin/copy-libs.sh arm64-macos /path/to/src/racket
 
-Where the first argument is either `arm64-macos` if you're on an Apple
-Silicon Mac or `x86_64-macos` if you're on an Intel Mac.
+Where the first argument depends on your target OS and architecture:
+
+| OS    | Architecture  | Argument       |
+|-------|---------------|----------------|
+| macOS | x86_64        | `x86_64-macos` |
+| macOS | arm64/aarch64 | `arm64-macos`  |
+| iOS   | arm64/aarch64 | `arm64-ios`    |
 
 Pre-compiled builds for recent versions of Racket are available on the
 following branches:
