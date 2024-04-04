@@ -252,6 +252,23 @@ public class Future<Err, Res> {
 }
 
 public class FutureUtil {
+  /// Represents asyncified future errors.
+  public enum AsyncError: Error {
+    case canceled
+    case error(String)
+  }
+
+  /// Converts a future into an async task.
+  public static func asyncify<Res>(_ future: Future<String, Res>) async throws -> Res {
+    return try await withUnsafeThrowingContinuation { k in
+      future.sink(
+        queue: .main,
+        onCancel: { k.resume(throwing: AsyncError.canceled) },
+        onError: { k.resume(throwing: AsyncError.error($0)) },
+        onComplete: { k.resume(returning: $0) })
+    }
+  }
+
   /// Returns a future that is immediately resolved.
   public static func resolved<Res>(with d: Res) -> Future<Never, Res> {
     let fut = Future<Never, Res>()
