@@ -1,7 +1,7 @@
 #lang info
 
 (define license 'BSD-3-Clause)
-(define version "0.6")
+(define version "0.7")
 (define collection "noise")
 (define deps '("base"
                "threading-lib"))
