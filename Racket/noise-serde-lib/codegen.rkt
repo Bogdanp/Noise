@@ -58,6 +58,16 @@
                  (~name name)
                  (swift-type type)))
        ", "))
+    (define arg-pairs-str
+      (string-join
+       (for/list ([arg (in-list args)])
+         (match-define (rpc-arg label name _type) arg)
+         (if (eq? label '_)
+             (~name name)
+             (format "~a: ~a"
+                     (~name label)
+                     (~name name))))
+       ", "))
     (fprintf out "~n")
     (fprintf out "  public func ~a(~a) -> Future<String, ~a> {~n" (~name name) args-str (swift-type type))
     (fprintf out "    return impl.send(~n")
@@ -75,6 +85,10 @@
        (fprintf out "        return ~a.read(from: inp, using: &buf)~n" (swift-type type))
        (fprintf out "      }~n")])
     (fprintf out "    )~n")
+    (fprintf out "  }~n")
+    (fprintf out "~n")
+    (fprintf out "  public func ~a(~a) async throws -> ~a {~n" (~name name) args-str (swift-type type))
+    (fprintf out "    return try await FutureUtil.asyncify(~a(~a))~n" (~name name) arg-pairs-str)
     (fprintf out "  }~n"))
 
   (define sorted-callout-ids (sort (hash-keys callout-infos) <))
