@@ -258,6 +258,11 @@ ids to handler procedures.
   That procedure can be used to install a callback from the Swift
   side.  Executing a callout on the Racket side before it's been
   installed from the Swift side raises an exception.
+
+  Currently, the buffer used to decode data sent back to Swift via
+  a callout is limited to 8KiB, so avoid sending large payloads. If
+  necessary, have the Swift side call a regular RPC when it receives a
+  callout instead.
 }
 
 @defproc[(serve [in-fd exact-integer?]
