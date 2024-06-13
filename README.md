@@ -30,6 +30,7 @@ Where the first argument depends on your target OS and architecture:
 Pre-compiled builds for recent versions of Racket are available on the
 following branches:
 
+* `racket-8.13`
 * `racket-8.12`
 * `racket-8.11.1`
 * `racket-8.11`
