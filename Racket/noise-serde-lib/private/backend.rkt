@@ -26,7 +26,7 @@
 (begin-for-syntax
   (define-syntax-class arg
     #:literals (:)
-    (pattern [name:id : type:expr] #:with label #'_)
+    (pattern [name:id : type:expr] #:with label #'name)
     (pattern [label:id name:id : type:expr])))
 
 (define-syntax (define-rpc stx)
