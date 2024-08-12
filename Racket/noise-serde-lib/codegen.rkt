@@ -53,10 +53,12 @@
       (string-join
        (for/list ([arg (in-list args)])
          (match-define (rpc-arg label name type) arg)
-         (format "~a ~a: ~a"
-                 (~name label)
-                 (~name name)
-                 (swift-type type)))
+         (define formatted-label (~name label))
+         (define formatted-name (~name name))
+         (define formatted-type (swift-type type))
+         (if (equal? formatted-label formatted-name)
+             (format "~a: ~a" formatted-label formatted-type)
+             (format "~a ~a: ~a" formatted-label formatted-name formatted-type)))
        ", "))
     (define arg-pairs-str
       (string-join
