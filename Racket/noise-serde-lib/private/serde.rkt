@@ -32,8 +32,20 @@
      (read-field (record-field-type f) in))))
 
 (define (write-record info v [out (current-output-port)])
-  (for ([f (in-list (record-info-fields info))])
-    (write-field (record-field-type f) ((record-field-accessor f) v) out)))
+  (define last-field-id #f)
+  (with-handlers ([exn:fail?
+                   (lambda (e)
+                     (define message
+                       (format "~a~n  while writing record field: ~a.~a"
+                               (exn-message e)
+                               (record-info-name info)
+                               last-field-id))
+                     (raise (exn:fail message (current-continuation-marks))))])
+    (for ([f (in-list (record-info-fields info))])
+      (define type (record-field-type f))
+      (define value ((record-field-accessor f) v))
+      (set! last-field-id (record-field-id f))
+      (write-field type value out))))
 
 (provide
  record-infos
@@ -180,8 +192,21 @@
 (define (do-write-enum-variant info idx v [out (current-output-port)])
   (define variant (vector-ref (enum-info-variants info) idx))
   (write-field UVarint (enum-variant-id variant) out)
-  (for ([f (in-list (enum-variant-fields variant))])
-    (write-field (enum-variant-field-type f) ((enum-variant-field-accessor f) v) out)))
+  (define last-field-name #f)
+  (with-handlers ([exn:fail?
+                   (lambda (e)
+                     (define message
+                       (format "~a~n  while writing enum variant field: ~a.~a.~a"
+                               (exn-message e)
+                               (enum-info-name info)
+                               (enum-variant-name variant)
+                               last-field-name))
+                     (raise (exn:fail message (current-continuation-marks))))])
+    (for ([f (in-list (enum-variant-fields variant))])
+      (define type (enum-variant-field-type f))
+      (define value ((enum-variant-field-accessor f) v))
+      (set! last-field-name (enum-variant-field-name f))
+      (write-field type value out))))
 
 (provide
  enum-infos
@@ -544,6 +569,8 @@
    (λ () ((field-type-swift-proc String)))))
 
 (module+ test
+  (require racket/string)
+
   (test-case "complex field serde"
     (define-record Example
       [b : Bool #:contract boolean?]
@@ -609,4 +636,22 @@
                       #:children (list (ApplyResult.text "a")
                                        (ApplyResult.text "b"))))))))
     (define bs (with-output-to-bytes (λ () (write-field (Enum ApplyResult) v))))
-    (check-equal? v (read-field (Enum ApplyResult) (open-input-bytes bs)))))
+    (check-equal? v (read-field (Enum ApplyResult) (open-input-bytes bs)))
+    (check-exn
+     (regexp
+      (regexp-quote
+       (string-join
+        '("string->bytes/utf-8: contract violation"
+          "  expected: string?"
+          "  given: #f"
+          "  while writing enum variant field: ApplyResult.text.t"
+          "  while writing record field: Stack.children")
+        "\n")))
+     (lambda ()
+       (write-record
+        Stack
+        (Stack
+         'horizontal
+         (list
+          (ApplyResult.text #f)))
+        (open-output-nowhere))))))
