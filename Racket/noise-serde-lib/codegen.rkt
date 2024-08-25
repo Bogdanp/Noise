@@ -120,8 +120,11 @@
   (fprintf out "}~n"))
 
 (define (write-enum-code e [out (current-output-port)])
-  (match-define (enum-info _id name variants) e)
-  (fprintf out "public enum ~a: Readable, Writable {~n" name)
+  (match-define (enum-info _id name protocols variants) e)
+  (define ~protocols
+    (let ([protocols (list* protocols '(Readable Writable))])
+      (string-join (map symbol->string protocols) ", ")))
+  (fprintf out "public enum ~a: ~a {~n" name ~protocols)
   (for ([v (in-vector variants)])
     (match-define (enum-variant _id name _constructor fields) v)
     (cond
@@ -183,8 +186,11 @@
   (fprintf out "}~n"))
 
 (define (write-record-code r [out (current-output-port)])
-  (match-define (record-info _id name _constructor fields) r)
-  (fprintf out "public struct ~a: Readable, Writable {~n" name)
+  (match-define (record-info _id name _constructor protocols fields) r)
+  (define ~protocols
+    (let ([protocols (list* protocols '(Readable Writable))])
+      (string-join (map symbol->string protocols) ", ")))
+  (fprintf out "public struct ~a: ~a {~n" name ~protocols)
   (for ([f (in-list fields)])
     (fprintf out
              "  public ~a ~a: ~a~n"

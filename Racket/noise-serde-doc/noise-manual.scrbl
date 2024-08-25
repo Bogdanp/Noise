@@ -39,7 +39,9 @@ definitions for records reachable from a given root module.
     #:literals (:)
     (define-record name
       field ...)
-    #:grammar ([field [field-id : field-type field-option ...]
+    #:grammar ([name (code:line id)
+                     (id : protocol-id ...+)]
+               [field [field-id : field-type field-option ...]
                       [(field-id default-expr) : field-type field-option ...]]
                [field-option (code:line #:mutable)
                              (code:line #:contract field-ctc-expr)])
@@ -59,7 +61,7 @@ definitions for records reachable from a given root module.
 
   @examples[
     #:eval ev
-    (define-record Human
+    (define-record (Human : Equatable Hashable)
       [name : String]
       [age : UVarint #:contract (integer-in 0 125)]
       [(likes-pizza? #t) : Bool])
@@ -70,6 +72,7 @@ definitions for records reachable from a given root module.
   ]
 
   @history[
+    #:changed "0.8" @elem{Added protocol support.}
     #:changed "0.3" @elem{Added the @racket[#:mutable] field option.}
   ]
 }
@@ -95,7 +98,9 @@ regular enums.
   #:literals (:)
   (define-enum name
     [variant-name variant-field ...] ...+)
-  #:grammar ([variant-field {field-id : field-type}])
+  #:grammar ([name (code:line id)
+                   (id : protocol-id ...+)]
+             [variant-field {field-id : field-type}])
   #:contracts ([field-type (or/c field-type? enum-info? record-info?)])]{
 
   Defines an enumeration called @racket[name] with the given set of
@@ -111,6 +116,10 @@ regular enums.
     (Result? (Result.ok))
     (Result? (Result.err "example"))
     Result
+  ]
+
+  @history[
+    #:changed "0.8" @elem{Added protocol support.}
   ]
 }
 

@@ -40,7 +40,7 @@
   #:datum-literals (define-record :)
   (pattern (define-record
              ~!
-             record-id:id
+             {~or record-id:id (record-id:id : protocol-id:id ...+)}
              record-field:record-field ...+)
            #:do [(track-binding #'record-id #:check-usages? #f)
                  (track-binding #'record-id "~a?" #:check-usages? #f)

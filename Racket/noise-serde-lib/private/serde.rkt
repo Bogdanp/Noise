@@ -52,7 +52,7 @@
  (struct-out record-info)
  (struct-out record-field))
 
-(struct record-info ([id #:mutable] name constructor fields)
+(struct record-info ([id #:mutable] name constructor protocols fields)
   #:property prop:procedure (struct-field-index constructor))
 (struct record-field (id type mutable? accessor))
 
@@ -62,6 +62,10 @@
    record-infos
    record-info-name
    set-record-info-id!))
+
+(begin-for-syntax
+  (define-syntax-class protocol
+    (pattern protocol:id #:with e #''protocol)))
 
 (define-syntax (define-record stx)
   (define (id-stx->keyword stx)
@@ -87,7 +91,9 @@
              #:with mut? (stx->bool-stx #'{~? mutable #f})))
 
   (syntax-parse stx
-    [(_ name:id fld:record-field ...)
+    #:literals (:)
+    [(_ {~or name:id (name:id : proto:protocol ...+)}
+        fld:record-field ...)
      #:with name? (format-id #'name "~a?" #'name)
      #:with constructor-id (format-id #'name "make-~a" #'name)
      #:with (fld-accessor-id ...)
@@ -138,8 +144,9 @@
                (struct-copy name r [fld.id v])) ...
              (values name name? fld-accessor-id ... fld-setter-id ...)))
          (define info
-           (let ([fields (list (record-field 'fld.id (->field-type 'Record fld.ft) fld.mut? fld-accessor-id) ...)])
-             (record-info #f 'name -name fields)))
+           (let ([protocols {~? (list proto.e ...) null}]
+                 [fields (list (record-field 'fld.id (->field-type 'Record fld.ft) fld.mut? fld-accessor-id) ...)])
+             (record-info #f 'name -name protocols fields)))
          (sequencer-add! record-info-sequencer info)
          (define/contract (constructor-id constructor-arg ...)
            (->* (required-ctor-arg-ctc ...)
@@ -216,7 +223,7 @@
 
 (struct enum-variant-field (name type accessor))
 (struct enum-variant (id name constructor fields))
-(struct enum-info ([id #:mutable] name variants))
+(struct enum-info ([id #:mutable] name protocols variants))
 
 (define enum-infos (make-hasheqv))
 (define enum-info-sequencer
@@ -232,7 +239,7 @@
 
   (syntax-parse stx
     #:literals (:)
-    [(_ name:id variant:enum-variant ...+)
+    [(_ {~or name:id (name:id : proto:protocol ...+)} variant:enum-variant ...+)
      #:with name? (format-id #'name "~a?" #'name)
      #:with (variant.idx ...)
      (for/list ([stx (in-list (syntax-e #'(variant ...)))]
@@ -271,6 +278,8 @@
            #:methods gen:enum-variant-writer
            {(define (write-enum-variant self [out (current-output-port)])
               (do-write-enum-variant info variant.idx self out))}) ...
+         (define protocols
+           {~? (list proto.e ...) null})
          (define variants
            (vector
             (enum-variant
@@ -283,7 +292,7 @@
                (->field-type 'Enum variant.fld-type)
                variant.fld-accessor-id) ...)) ...))
          (define info
-           (enum-info #f 'name variants))
+           (enum-info #f 'name protocols variants))
          (sequencer-add! enum-info-sequencer info))]))
 
 (define-syntax enum-out
@@ -654,4 +663,19 @@
          'horizontal
          (list
           (ApplyResult.text #f)))
-        (open-output-nowhere))))))
+        (open-output-nowhere)))))
+
+  (test-case "enum with protocols"
+    (define-enum (Foo : Equatable)
+      [foo]
+      [bar])
+    (check-equal?
+     (enum-info-protocols Foo)
+     '(Equatable)))
+
+  (test-case "record with protocols"
+    (define-record (Foo : Equatable Identifiable)
+      [id : UVarint])
+    (check-equal?
+     (record-info-protocols Foo)
+     '(Equatable Identifiable))))
