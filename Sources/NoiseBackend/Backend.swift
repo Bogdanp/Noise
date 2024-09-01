@@ -18,7 +18,7 @@ public struct BackendStats {
 }
 
 /// Client implementation for an async Racket backend.
-public class Backend {
+public final class Backend: @unchecked Sendable {
   private let ip = Pipe() // in  from Racket's perspective
   private let op = Pipe() // out from Racket's perspective
 

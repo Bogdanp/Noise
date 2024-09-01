@@ -7,7 +7,7 @@ private var defaultErrorHandler: (Any) -> Void = { err in
 
 /// A container for data that will be received from a Backend at some
 /// point.
-public class Future<Err, Res> {
+public final class Future<Err, Res>: @unchecked Sendable {
   private let mu = DispatchSemaphore(value: 1)
   private var waiters = [DispatchSemaphore]()
 
@@ -253,9 +253,18 @@ public class Future<Err, Res> {
 
 public class FutureUtil {
   /// Represents asyncified future errors.
-  public enum AsyncError: Error {
+  public enum AsyncError: LocalizedError {
     case canceled
     case error(String)
+
+    public var errorDescription: String {
+      switch self {
+      case .canceled:
+        return "Operation Canceled"
+      case .error(let s):
+        return s
+      }
+    }
   }
 
   /// Converts a future into an async task.
