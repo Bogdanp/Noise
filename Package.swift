@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.8
 import PackageDescription
 
 let package = Package(
@@ -31,6 +31,9 @@ let package = Package(
       resources: [
         .copy("boot"),
       ],
+      swiftSettings: [
+        .enableUpcomingFeature("StrictConcurrency")
+      ],
       linkerSettings: [
         .linkedLibrary("curses", .when(platforms: [.macOS])),
         .linkedLibrary("iconv"),
@@ -41,10 +44,16 @@ let package = Package(
       dependencies: [
         "Noise",
         "NoiseSerde"
+      ],
+      swiftSettings: [
+        .enableUpcomingFeature("StrictConcurrency")
       ]
     ),
     .target(
-      name: "NoiseSerde"
+      name: "NoiseSerde",
+      swiftSettings: [
+        .enableUpcomingFeature("StrictConcurrency")
+      ]
     ),
     .testTarget(
       name: "NoiseTest",
@@ -55,6 +64,9 @@ let package = Package(
       ],
       resources: [
         .copy("Modules"),
+      ],
+      swiftSettings: [
+        .enableUpcomingFeature("StrictConcurrency")
       ]
     ),
     .binaryTarget(
