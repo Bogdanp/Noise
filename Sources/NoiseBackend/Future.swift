@@ -257,7 +257,7 @@ public class FutureUtil {
     case canceled
     case error(String)
 
-    public var errorDescription: String {
+    public var errorDescription: String? {
       switch self {
       case .canceled:
         return "Operation Canceled"
