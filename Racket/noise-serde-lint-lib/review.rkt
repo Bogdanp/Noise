@@ -20,7 +20,7 @@
   #:datum-literals (define-enum :)
   (pattern (define-enum
              ~!
-             enum-id:id
+             {~or enum-id:id (enum-id:id : protocol-id:id ...+)}
              [variant-id:id {field-id:id : field-type:expression} ...] ...)
            #:do [(track-binding #'enum-id #:check-usages? #f)
                  (track-binding #'enum-id "~a?" #:check-usages? #f)
