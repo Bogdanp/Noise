@@ -28,6 +28,27 @@ Where the first argument depends on your target OS and architecture:
 | iOS           | arm64/aarch64 | `arm64-ios`             |
 | iOS Simulator | arm64/aarch64 | `arm64-iphonesimulator` |
 
+For iOS, you have to configure Racket with the following flags in order
+to generate a portable bytecode build for iOS:
+
+    configure \
+      --host=aarch64-apple-darwin \
+      --enable-ios=iPhoneOS \
+      --enable-pb \
+      --enable-racket=auto \
+      --enable-libffi
+
+For the iPhone Simulator, change the `--enable-ios` flag to
+`iPhoneSimulator`. After building for either platform, you need to merge
+the associated `libffi` archive into the generated `libracketcs.a`. For
+example:
+
+    libtool -s \
+      -o racket/lib/libracketcs1.a \
+      racket/lib/libracketcs.a \
+      /path/to/libffi.a \
+      && mv racket/libracketcs{1,}.a
+
 Pre-compiled builds for recent versions of Racket are available on the
 following branches:
 
