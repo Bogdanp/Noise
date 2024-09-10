@@ -1,7 +1,7 @@
 import Foundation
 
 /// Wraps a `FileHandle` to add buffered reading support.
-public final class InputPort: Sendable {
+public final class InputPort {
   private let fd: Int32
   private let bufsize: Int
   private var buf: Data!
@@ -68,7 +68,7 @@ public final class InputPort: Sendable {
 }
 
 /// Wraps a `FileHandle` to add buffered writing support.
-public final class OutputPort: Sendable {
+public final class OutputPort {
   private let handle: FileHandle
   private var buf: Data!
   private let bufsize: Int
