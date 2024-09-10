@@ -37,12 +37,13 @@ public final class Backend: @unchecked Sendable {
       self.serve(zo, modname, proc)
     }
     server.name = "Noise Backend (Server)"
+    server.qualityOfService = .userInitiated
     server.start()
     let reader = Thread {
       self.read()
     }
     reader.name = "Noise Backend (Reader)"
-    reader.qualityOfService = .userInteractive
+    reader.qualityOfService = .userInitiated
     reader.start()
   }
 
