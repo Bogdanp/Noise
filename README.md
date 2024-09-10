@@ -21,11 +21,12 @@ run:
 
 Where the first argument depends on your target OS and architecture:
 
-| OS    | Architecture  | Argument       |
-|-------|---------------|----------------|
-| macOS | x86_64        | `x86_64-macos` |
-| macOS | arm64/aarch64 | `arm64-macos`  |
-| iOS   | arm64/aarch64 | `arm64-ios`    |
+| OS            | Architecture  | Argument                |
+|---------------|---------------|-------------------------|
+| macOS         | x86_64        | `x86_64-macos`          |
+| macOS         | arm64/aarch64 | `arm64-macos`           |
+| iOS           | arm64/aarch64 | `arm64-ios`             |
+| iOS Simulator | arm64/aarch64 | `arm64-iphonesimulator` |
 
 Pre-compiled builds for recent versions of Racket are available on the
 following branches:
