@@ -9,7 +9,7 @@ jobs:
         uses: actions/checkout@master
 
       - name: Setup Swift
-        uses: swift-actions/setup-swift@v1
+        uses: swift-actions/setup-swift@v2
         with:
           swift-version: '5.8'
 
@@ -27,7 +27,7 @@ jobs:
         run: git lfs ls-files -l | cut -d ' ' -f1 | sort > .lfs-ids
 
       - name: Cache LFS files
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .git/lfs
           key: lfs-${{ hashFiles('.lfs-ids') }}
