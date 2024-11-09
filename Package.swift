@@ -23,13 +23,20 @@ let package = Package(
   ],
   targets: [
     .target(
+      name: "NoiseBoot_iOS",
+      resources: [.copy("boot")]
+    ),
+    .target(
+      name: "NoiseBoot_macOS",
+      resources: [.copy("boot")]
+    ),
+    .target(
       name: "Noise",
       dependencies: [
+        .target(name: "NoiseBoot_iOS", condition: .when(platforms: [.iOS])),
+        .target(name: "NoiseBoot_macOS", condition: .when(platforms: [.macOS])),
         .target(name: "RacketCS-ios", condition: .when(platforms: [.iOS])),
         .target(name: "RacketCS-macos", condition: .when(platforms: [.macOS])),
-      ],
-      resources: [
-        .copy("boot"),
       ],
       swiftSettings: [
         .enableUpcomingFeature("StrictConcurrency")

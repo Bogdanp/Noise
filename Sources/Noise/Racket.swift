@@ -10,8 +10,12 @@ let ARCH = "arm64"
 #endif
 
 #if os(macOS)
+import NoiseBoot_macOS
+
 let OS = "macos"
 #elseif os(iOS)
+import NoiseBoot_iOS
+
 let OS = "ios"
 #else
 #error("unsupported OS")
@@ -29,15 +33,11 @@ let OS = "ios"
 /// - Warning: Only one instance may be created per process.
 public struct Racket {
   public init(execPath: String = "racket") {
-    let petiteURL = Bundle.module.url(forResource: "boot/\(ARCH)-\(OS)/petite", withExtension: "boot")!
-    let schemeURL = Bundle.module.url(forResource: "boot/\(ARCH)-\(OS)/scheme", withExtension: "boot")!
-    let racketURL = Bundle.module.url(forResource: "boot/\(ARCH)-\(OS)/racket", withExtension: "boot")!
-
     var args = racket_boot_arguments_t()
     args.exec_file = execPath.utf8CString.cstring()
-    args.boot1_path = petiteURL.path.utf8CString.cstring()
-    args.boot2_path = schemeURL.path.utf8CString.cstring()
-    args.boot3_path = racketURL.path.utf8CString.cstring()
+    args.boot1_path = NoiseBoot.petiteURL.path.utf8CString.cstring()
+    args.boot2_path = NoiseBoot.schemeURL.path.utf8CString.cstring()
+    args.boot3_path = NoiseBoot.racketURL.path.utf8CString.cstring()
     racket_boot(&args)
     racket_deactivate_thread()
     args.exec_file.deallocate()
