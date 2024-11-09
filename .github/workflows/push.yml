@@ -2,7 +2,7 @@ name: CI
 on: [push]
 jobs:
   build:
-    runs-on: macos-12
+    runs-on: macos-13
     name: Build & Test
     steps:
       - name: Checkout
