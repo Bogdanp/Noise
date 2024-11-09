@@ -16,11 +16,24 @@ cp "$RACKET/include/racketcsboot.h" "$ROOT/Lib/include/racketcsboot.h"
 cp "$RACKET/include/racketcs.h" "$ROOT/Lib/include/racketcs.h"
 cp "$RACKET/lib/libracketcs.a" "$ROOT/Lib/libracketcs-$ARCH.a"
 
-# For iPhoneSimulator, we always use the iOS bootfiles so there's no
-# point in copying them.
-if [ "$ARCH" != "arm64-iphonesimulator" ]; then
-    mkdir -p "$ROOT/boot/$ARCH"
-    cp "$RACKET/lib/petite.boot" "$ROOT/boot/$ARCH/petite.boot"
-    cp "$RACKET/lib/scheme.boot" "$ROOT/boot/$ARCH/scheme.boot"
-    cp "$RACKET/lib/racket.boot" "$ROOT/boot/$ARCH/racket.boot"
-fi
+case "$ARCH" in
+    "arm64-ios")
+        DEST="$ROOT/Sources/NoiseBoot_iOS/boot/$ARCH"
+        mkdir -p "$DEST"
+        cp "$RACKET/lib/petite.boot" "$DEST/petite.boot"
+        cp "$RACKET/lib/scheme.boot" "$DEST/scheme.boot"
+        cp "$RACKET/lib/racket.boot" "$DEST/racket.boot"
+        ;;
+    "arm64-macos" | "x86_64-macos")
+        DEST="$ROOT/Sources/NoiseBoot_macOS/boot/$ARCH"
+        mkdir -p "$DEST"
+        cp "$RACKET/lib/petite.boot" "$DEST/petite.boot"
+        cp "$RACKET/lib/scheme.boot" "$DEST/scheme.boot"
+        cp "$RACKET/lib/racket.boot" "$DEST/racket.boot"
+        ;;
+    *)
+        # For iPhoneSimulator, we use the iOS bootfiles so there's no
+        # point in copying them.
+        echo "warning: boot files ignored for $ARCH"
+        ;;
+esac
