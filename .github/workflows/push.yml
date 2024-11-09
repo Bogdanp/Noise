@@ -20,7 +20,7 @@ jobs:
         uses: Bogdanp/setup-racket@v1.11
         with:
           variant: 'CS'
-          version: '8.13'
+          version: 'current'
           packages: 'http-easy-lib'
 
       - name: Build LFS file list
