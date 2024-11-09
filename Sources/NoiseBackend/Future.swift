@@ -254,13 +254,10 @@ public final class Future<Err, Res>: @unchecked Sendable {
 public class FutureUtil {
   /// Represents asyncified future errors.
   public enum AsyncError: LocalizedError {
-    case canceled
     case error(String)
 
     public var errorDescription: String? {
       switch self {
-      case .canceled:
-        return "Operation Canceled"
       case .error(let s):
         return s
       }
@@ -269,12 +266,16 @@ public class FutureUtil {
 
   /// Converts a future into an async task.
   public static func asyncify<Res>(_ future: Future<String, Res>) async throws -> Res {
-    return try await withUnsafeThrowingContinuation { k in
-      future.sink(
-        queue: .main,
-        onCancel: { k.resume(throwing: AsyncError.canceled) },
-        onError: { k.resume(throwing: AsyncError.error($0)) },
-        onComplete: { k.resume(returning: $0) })
+    return try await withTaskCancellationHandler {
+      return try await withUnsafeThrowingContinuation { k in
+        future.sink(
+          queue: .main,
+          onCancel: { k.resume(throwing: CancellationError()) },
+          onError: { k.resume(throwing: AsyncError.error($0)) },
+          onComplete: { k.resume(returning: $0) })
+      }
+    } onCancel: {
+      future.cancel()
     }
   }
 
