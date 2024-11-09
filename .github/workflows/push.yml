@@ -2,16 +2,11 @@ name: CI
 on: [push]
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-15
     name: Build & Test
     steps:
       - name: Checkout
         uses: actions/checkout@master
-
-      - name: Setup Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: '5.8'
 
       - name: Check Swift Version
         run: swift --version
@@ -40,7 +35,4 @@ jobs:
           pushd Racket && raco pkg install --auto noise-serde-lib/ noise-serde-doc/
 
       - name: Build & Test
-        run: |
-          make && \
-            swift build -Xswiftc -Xfrontend -Xswiftc -validate-tbd-against-ir=none && \
-            swift test -Xswiftc -Xfrontend -Xswiftc -validate-tbd-against-ir=none
+        run: make && swift build && swift test
