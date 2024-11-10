@@ -4,7 +4,7 @@ import Noise
 import NoiseSerde
 import OSLog
 
-fileprivate let logger = Logger(
+nonisolated(unsafe) fileprivate let logger = Logger(
   subsystem: "io.defn.NoiseBackend",
   category: "Backend"
 )
@@ -134,7 +134,7 @@ fileprivate protocol ResponseHandler {
   func handle(from inp: InputPort, using buf: inout Data) -> UInt64
 }
 
-fileprivate struct ResponseHandlerImpl<T>: ResponseHandler {
+fileprivate struct ResponseHandlerImpl<T>: ResponseHandler where T: Sendable {
   let id: UInt64
   let fut: Future<String, T>
   let read: (InputPort, inout Data) -> T

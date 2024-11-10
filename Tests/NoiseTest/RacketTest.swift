@@ -1,7 +1,7 @@
 import Noise
 import XCTest
 
-var r: Racket!
+nonisolated(unsafe) var r: Racket!
 
 class RacketTest: XCTestCase {
   override class func setUp() {
@@ -86,8 +86,8 @@ class RacketTest: XCTestCase {
   }
 }
 
-fileprivate var calloutResult: String?
-fileprivate var calloutExampleProc: @convention(c) (Int, UnsafePointer<CChar>) -> Void = { len, ptr in
+nonisolated(unsafe) fileprivate var calloutResult: String?
+nonisolated(unsafe) fileprivate var calloutExampleProc: @convention(c) (Int, UnsafePointer<CChar>) -> Void = { len, ptr in
   let data = Data(bytes: ptr, count: len)
   calloutResult = String(data: data, encoding: .utf8)!
 }

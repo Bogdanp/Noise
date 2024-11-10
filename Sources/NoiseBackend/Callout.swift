@@ -14,9 +14,9 @@ public func installCallback(
   return rpc(id, Int64(addr))
 }
 
-fileprivate var callbacks = [UInt64: (InputPort) -> Void]()
-fileprivate var callbacksSema = DispatchSemaphore(value: 1)
-fileprivate let callbackHandler: @convention(c) (UInt64, Int, UnsafePointer<CChar>) -> Void = { id, len, ptr in
+nonisolated(unsafe) fileprivate var callbacks = [UInt64: (InputPort) -> Void]()
+nonisolated(unsafe) fileprivate var callbacksSema = DispatchSemaphore(value: 1)
+nonisolated(unsafe) fileprivate let callbackHandler: @convention(c) (UInt64, Int, UnsafePointer<CChar>) -> Void = { id, len, ptr in
   let data = Data(bytes: ptr, count: len)
   let pipe = Pipe()
   DispatchQueue.global(qos: .background).async {

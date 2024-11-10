@@ -1,13 +1,14 @@
 import Dispatch
 import Foundation
 
-private var defaultErrorHandler: (Any) -> Void = { err in
+nonisolated(unsafe) private var defaultErrorHandlerMu = DispatchSemaphore(value: 1)
+nonisolated(unsafe) private var defaultErrorHandler: (Any) -> Void = { err in
   preconditionFailure("unexpected error: \(err)")
 }
 
 /// A container for data that will be received from a Backend at some
 /// point.
-public final class Future<Err, Res>: @unchecked Sendable {
+public final class Future<Err, Res>: @unchecked Sendable where Err: Sendable, Res: Sendable {
   private let mu = DispatchSemaphore(value: 1)
   private var waiters = [DispatchSemaphore]()
 
@@ -24,7 +25,7 @@ public final class Future<Err, Res>: @unchecked Sendable {
   public struct Canceled: Error {}
 
   /// Thrown by `Future.wait` on error.
-  public struct WaitError<E>: LocalizedError {
+  public struct WaitError<E>: LocalizedError where E: Sendable {
     let error: E
 
     public var errorDescription: String? {
@@ -37,7 +38,7 @@ public final class Future<Err, Res>: @unchecked Sendable {
 
   /// Represents the disjoint result values that may be returned by
   /// calls to `Future.wait(timeout:)`.
-  public enum WaitResult<E, R> {
+  public enum WaitResult<E, R>: Sendable where E: Sendable, R: Sendable {
     case timedOut
     case canceled
     case error(E)
@@ -82,7 +83,7 @@ public final class Future<Err, Res>: @unchecked Sendable {
 
   /// Returns a new Future containing the result of applying `proc` to
   /// the data contained in the Future (once available).
-  public func map<R>(_ proc: @escaping (Res) -> R) -> Future<Err, R> {
+  public func map<R>(_ proc: @escaping @Sendable (Res) -> R) -> Future<Err, R> {
     let f = Future<Err, R>()
     DispatchQueue.global(qos: .default).async {
       switch self.wait(timeout: .distantFuture) {
@@ -101,7 +102,7 @@ public final class Future<Err, Res>: @unchecked Sendable {
 
   /// Returns a new Future containing the result of applying `proc` to
   /// the error contained in the Future (once available and if any).
-  public func mapError<E>(_ proc: @escaping (Err) -> E) -> Future<E, Res> {
+  public func mapError<E>(_ proc: @escaping @Sendable (Err) -> E) -> Future<E, Res> {
     let f = Future<E, Res>()
     DispatchQueue.global(qos: .default).async {
       switch self.wait(timeout: .distantFuture) {
@@ -119,7 +120,7 @@ public final class Future<Err, Res>: @unchecked Sendable {
   }
 
   /// Chains two Futures together.
-  public func andThen<R>(_ proc: @escaping (Res) -> Future<Err, R>) -> Future<Err, R> {
+  public func andThen<R>(_ proc: @escaping @Sendable (Res) -> Future<Err, R>) -> Future<Err, R> {
     let f = Future<Err, R>()
     DispatchQueue.global(qos: .default).async {
       switch self.wait(timeout: .distantFuture) {
@@ -150,9 +151,9 @@ public final class Future<Err, Res>: @unchecked Sendable {
   /// has no effect.
   public func sink(
     queue: DispatchQueue = DispatchQueue.main,
-    onCancel cancelProc: @escaping () -> Void = { },
-    onError errorProc: @escaping (Err) -> Void = { _ in },
-    onComplete completeProc: @escaping (Res) -> Void
+    onCancel cancelProc: @escaping @Sendable () -> Void = { },
+    onError errorProc: @escaping @Sendable (Err) -> Void = { _ in },
+    onComplete completeProc: @escaping @Sendable (Res) -> Void
   ) {
     DispatchQueue.global(qos: .default).async {
       let res = self.wait(timeout: .distantFuture)
@@ -173,10 +174,17 @@ public final class Future<Err, Res>: @unchecked Sendable {
 
   /// Executes `proc` on `queue` with the Future's data if and once
   /// available.
-  public func onComplete(queue: DispatchQueue = DispatchQueue.main, _ proc: @escaping (Res) -> Void) {
+  public func onComplete(
+    queue: DispatchQueue = DispatchQueue.main,
+    _ proc: @escaping @Sendable (Res) -> Void
+  ) {
     sink(
       queue: queue,
-      onError: defaultErrorHandler,
+      onError: { error in
+        defaultErrorHandlerMu.wait()
+        defer { defaultErrorHandlerMu.signal() }
+        defaultErrorHandler(error)
+      },
       onComplete: proc
     )
   }
@@ -295,6 +303,8 @@ public class FutureUtil {
 
   /// Sets the default error handler that is used by `Future.onComplete`.
   public static func set(defaultErrorHandler hdl: @escaping (Any) -> Void) {
+    defaultErrorHandlerMu.wait()
     defaultErrorHandler = hdl
+    defaultErrorHandlerMu.signal()
   }
 }

@@ -114,13 +114,13 @@ public struct Val {
   #endif
 
   /// The empty list.
-  public static let null = Val(ptr: racket_nil())
+  nonisolated(unsafe) public static let null = Val(ptr: racket_nil())
 
   /// The true value.
-  public static let f = Val(ptr: racket_false())
+  nonisolated(unsafe) public static let f = Val(ptr: racket_false())
 
   /// The false value.
-  public static let t = Val(ptr: racket_true())
+  nonisolated(unsafe) public static let t = Val(ptr: racket_true())
 
   /// Creates a Chez Scheme fixnum.
   public static func fixnum(_ i: Int) -> Val {
