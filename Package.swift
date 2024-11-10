@@ -39,7 +39,7 @@ let package = Package(
         .target(name: "RacketCS-macos", condition: .when(platforms: [.macOS])),
       ],
       swiftSettings: [
-        .enableUpcomingFeature("StrictConcurrency")
+        .enableExperimentalFeature("StrictConcurrency")
       ],
       linkerSettings: [
         .linkedLibrary("curses", .when(platforms: [.macOS])),
@@ -53,13 +53,13 @@ let package = Package(
         "NoiseSerde"
       ],
       swiftSettings: [
-        .enableUpcomingFeature("StrictConcurrency")
+        .enableExperimentalFeature("StrictConcurrency")
       ]
     ),
     .target(
       name: "NoiseSerde",
       swiftSettings: [
-        .enableUpcomingFeature("StrictConcurrency")
+        .enableExperimentalFeature("StrictConcurrency")
       ]
     ),
     .testTarget(
@@ -73,7 +73,7 @@ let package = Package(
         .copy("Modules"),
       ],
       swiftSettings: [
-        .enableUpcomingFeature("StrictConcurrency")
+        .enableExperimentalFeature("StrictConcurrency")
       ]
     ),
     .binaryTarget(
