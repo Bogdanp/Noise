@@ -29,7 +29,7 @@ Where the first argument depends on your target OS and architecture:
 | iOS Simulator | arm64/aarch64 | `arm64-iphonesimulator` |
 
 For iOS, you have to configure Racket with the following flags in order
-to generate a portable bytecode build for iOS:
+to generate a portable bytecode build:
 
     configure \
       --host=aarch64-apple-darwin \
