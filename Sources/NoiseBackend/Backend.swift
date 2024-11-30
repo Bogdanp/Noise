@@ -2,9 +2,9 @@ import Dispatch
 import Foundation
 import Noise
 import NoiseSerde
-@preconcurrency import OSLog
+import OSLog
 
-fileprivate let logger = Logger(
+nonisolated(unsafe) fileprivate let logger = Logger(
   subsystem: "io.defn.NoiseBackend",
   category: "Backend"
 )
@@ -18,7 +18,7 @@ public struct BackendStats {
 }
 
 /// Client implementation for an async Racket backend.
-public final class Backend: Sendable {
+public final class Backend: @unchecked Sendable {
   private let ip = Pipe() // in  from Racket's perspective
   private let op = Pipe() // out from Racket's perspective
 
