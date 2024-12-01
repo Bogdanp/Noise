@@ -280,7 +280,7 @@ public struct Val {
   /// if the value is not a bytevector.
   public func unsafeBytestring() -> String? {
     return unsafeBytevector(nulTerminated: true).withUnsafeBufferPointer { buf -> String? in
-      return String(validatingUTF8: buf.baseAddress!)
+      return String(validatingCString: buf.baseAddress!)
     }
   }
 
