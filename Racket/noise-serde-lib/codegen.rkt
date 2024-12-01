@@ -99,7 +99,7 @@
       (hash-ref callout-infos id))
     (define proc-name (~name name))
     (define proc-type
-      (format "@escaping (~a) -> Void"
+      (format "@escaping @Sendable (~a) -> Void"
               (string-join
                (map (compose1 swift-type callout-arg-type) args)
                ", ")))
