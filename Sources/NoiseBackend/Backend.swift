@@ -4,13 +4,13 @@ import Noise
 import NoiseSerde
 import OSLog
 
-nonisolated(unsafe) fileprivate let logger = Logger(
+fileprivate let logger = Logger(
   subsystem: "io.defn.NoiseBackend",
   category: "Backend"
 )
 
 /// Statistics reported by Backends.
-public struct BackendStats {
+public struct BackendStats: Sendable {
   public let totalRequests: UInt64
   public let totalWaitNanos: UInt64
   public let totalReadNanos: UInt64
