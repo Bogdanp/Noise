@@ -1,4 +1,4 @@
-// swift-tools-version:5.8
+// swift-tools-version:6.0
 import PackageDescription
 
 let package = Package(
@@ -38,9 +38,6 @@ let package = Package(
         .target(name: "RacketCS-ios", condition: .when(platforms: [.iOS])),
         .target(name: "RacketCS-macos", condition: .when(platforms: [.macOS])),
       ],
-      swiftSettings: [
-        .enableExperimentalFeature("StrictConcurrency")
-      ],
       linkerSettings: [
         .linkedLibrary("curses", .when(platforms: [.macOS])),
         .linkedLibrary("iconv"),
@@ -51,16 +48,10 @@ let package = Package(
       dependencies: [
         "Noise",
         "NoiseSerde"
-      ],
-      swiftSettings: [
-        .enableExperimentalFeature("StrictConcurrency")
       ]
     ),
     .target(
-      name: "NoiseSerde",
-      swiftSettings: [
-        .enableExperimentalFeature("StrictConcurrency")
-      ]
+      name: "NoiseSerde"
     ),
     .testTarget(
       name: "NoiseTest",
@@ -71,9 +62,6 @@ let package = Package(
       ],
       resources: [
         .copy("Modules"),
-      ],
-      swiftSettings: [
-        .enableExperimentalFeature("StrictConcurrency")
       ]
     ),
     .binaryTarget(
