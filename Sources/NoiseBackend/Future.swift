@@ -277,7 +277,7 @@ public class FutureUtil {
     return try await withTaskCancellationHandler {
       return try await withUnsafeThrowingContinuation { k in
         future.sink(
-          queue: .main,
+          queue: .global(qos: .userInitiated),
           onCancel: { k.resume(throwing: CancellationError()) },
           onError: { k.resume(throwing: AsyncError.error($0)) },
           onComplete: { k.resume(returning: $0) })
