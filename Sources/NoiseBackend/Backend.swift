@@ -88,11 +88,13 @@ public final class Backend: @unchecked Sendable {
 
   public func send<T>(
     writeProc write: (OutputPort) -> Void,
-    readProc read: @escaping (InputPort, inout Data) -> T
+    readProc read: @escaping (InputPort, inout Data) -> T,
+    commandName: String = #function
   ) -> Future<String, T> {
     mu.wait()
     let id = seq
     seq += 1
+    logger.debug("sending \(commandName) with id \(id)")
     let t0 = DispatchTime.now()
     id.write(to: out)
     write(out)
