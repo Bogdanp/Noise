@@ -65,16 +65,16 @@ public final class Backend: @unchecked Sendable {
     var buf = Data(count: 8*1024) // will grow as needed
     while true {
       let id = UVarint.read(from: inp, using: &buf)
-      logger.debug("reading response \(id), bufsize: \(buf.count)b")
+      logger.debug("\(RequestId(value: id)): reading response; bufsize: \(buf.count)b")
       mu.wait()
       guard let handler = pending[id] else {
-        logger.fault("future for response \(id) gone")
+        logger.fault("\(RequestId(value: id)): future is gone")
         mu.signal()
         continue
       }
       mu.signal()
       let readDuration = handler.handle(from: inp, using: &buf)
-      logger.debug("took \(Duration(nanos: readDuration), privacy: .public) to read response \(id)")
+      logger.debug("\(RequestId(value: id)): took \(Duration(nanos: readDuration), privacy: .public) to read")
       mu.wait()
       pending.removeValue(forKey: id)
       let requestDuration = DispatchTime.now().uptimeNanoseconds - handler.time.uptimeNanoseconds
@@ -82,7 +82,7 @@ public final class Backend: @unchecked Sendable {
       totalWaitNanos += requestDuration
       totalReadNanos += readDuration
       mu.signal()
-      logger.debug("took \(Duration(nanos: requestDuration), privacy: .public) to fulfill request \(id)")
+      logger.debug("\(RequestId(value: id)): took \(Duration(nanos: requestDuration), privacy: .public) to fulfill")
     }
   }
 
@@ -94,7 +94,7 @@ public final class Backend: @unchecked Sendable {
     mu.wait()
     let id = seq
     seq += 1
-    logger.debug("sending \(commandName) with id \(id)")
+    logger.debug("\(RequestId(value: id)): \(commandName)")
     let t0 = DispatchTime.now()
     id.write(to: out)
     write(out)
@@ -150,6 +150,14 @@ fileprivate struct ResponseHandlerImpl<T>: ResponseHandler where T: Sendable {
       fut.reject(with: String.read(from: inp, using: &buf))
     }
     return DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
+  }
+}
+
+fileprivate struct RequestId: CustomStringConvertible {
+  let value: UInt64
+
+  var description: String {
+    return String(format: "#%06d", value)
   }
 }
 
