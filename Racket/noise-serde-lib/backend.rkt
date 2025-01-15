@@ -36,7 +36,7 @@
                   (close-input-port server-in)
                   (close-output-port server-out)]
                  [`(response ,id ,response-type ,response-data)
-                  (log-noise-debug "response ~a: ~.v" id response-data)
+                  (log-noise-debug "<~a: ~.v" id response-data)
                   (write-uvarint id server-out)
                   (if (exn:fail? response-data)
                       (write-error response-data server-out)
@@ -60,7 +60,7 @@
                  (define args
                    (for/list ([ra (in-list rpc-args)])
                      (read-field (rpc-arg-type ra) in)))
-                 (log-noise-debug "request ~a: ~.v" req-id (cons rpc-name args))
+                 (log-noise-debug ">~a: ~.v" req-id (cons rpc-name args))
                  (define request-cust
                    (make-custodian))
                  (define request-thd
