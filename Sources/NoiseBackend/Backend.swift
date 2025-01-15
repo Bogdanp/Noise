@@ -65,7 +65,7 @@ public final class Backend: @unchecked Sendable {
     var buf = Data(count: 8*1024) // will grow as needed
     while true {
       let id = UVarint.read(from: inp, using: &buf)
-      logger.debug("\(RequestId(value: id)): reading response; bufsize: \(buf.count)b")
+      //logger.debug("\(RequestId(value: id)): reading response; bufsize: \(buf.count)b")
       mu.wait()
       guard let handler = pending[id] else {
         logger.fault("\(RequestId(value: id)): future is gone")
@@ -74,7 +74,7 @@ public final class Backend: @unchecked Sendable {
       }
       mu.signal()
       let readDuration = handler.handle(from: inp, using: &buf)
-      logger.debug("\(RequestId(value: id)): took \(Duration(nanos: readDuration), privacy: .public) to read")
+      //logger.debug("\(RequestId(value: id)): took \(Duration(nanos: readDuration), privacy: .public) to read")
       mu.wait()
       pending.removeValue(forKey: id)
       let requestDuration = DispatchTime.now().uptimeNanoseconds - handler.time.uptimeNanoseconds
