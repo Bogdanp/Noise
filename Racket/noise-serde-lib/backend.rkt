@@ -44,7 +44,7 @@
                   (flush-output server-out)
                   (loop)]
                  [msg
-                  (log-warning "backend/serve invalid message: ~e" msg)])))
+                  (log-noise-warning "backend/serve invalid message: ~e" msg)])))
             (handle-evt
              server-in
              (lambda (in)

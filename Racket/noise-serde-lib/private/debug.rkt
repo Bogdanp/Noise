@@ -4,6 +4,7 @@
 
 (provide
  log-noise-debug
+ log-noise-warning
  make-debug-input-port
  make-debug-output-port)
 
