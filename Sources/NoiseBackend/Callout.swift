@@ -26,5 +26,5 @@ nonisolated(unsafe) fileprivate let callbackHandler: @convention(c) (UInt64, Int
   callbacksSema.wait()
   let proc = callbacks[id]
   callbacksSema.signal()
-  proc!(InputPort(withHandle: pipe.fileHandleForReading))
+  proc!(FileHandleInputPort(withHandle: pipe.fileHandleForReading))
 }

@@ -6,8 +6,8 @@ class SerdeTests: XCTestCase {
     let bufsizes = [1, 2, 4, 8, 1024]
     for bufsize in bufsizes {
       let p = Pipe()
-      let inp = InputPort(withHandle: p.fileHandleForReading, andBufSize: bufsize)
-      let out = OutputPort(withHandle: p.fileHandleForWriting)
+      let inp = FileHandleInputPort(withHandle: p.fileHandleForReading, andBufSize: bufsize)
+      let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
       out.write(contentsOf: "hello".data(using: .utf8)!)
       out.flush()
       var buf = Data(count: 8192)
@@ -19,8 +19,8 @@ class SerdeTests: XCTestCase {
 
   func testFloat64Roundtrip() {
     let p = Pipe()
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     let tests: [Float64] = [0, 0.5, 1.25, -5.0]
     var buf = Data(count: 8192)
     for n in tests {
@@ -32,8 +32,8 @@ class SerdeTests: XCTestCase {
 
   func testInt32Roundtrip() {
     let p = Pipe()
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     let tests: [Int32] = [0, 0xFF, -0xFF, 0x7FFFFFFF, -0x7FFFFFFF]
     var buf = Data(count: 8192)
     for n in tests {
@@ -45,8 +45,8 @@ class SerdeTests: XCTestCase {
 
   func testVarintRoundtrip() {
     let p = Pipe()
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     let tests: [Varint] = [
       0x0, 0x1, -0x1, 0x7F, -0x7F, 0x80, -0x80,
       0xFF, -0xFF, 0xFFF, -0xFFF, 0xFFFFF, -0xFFFFF,
@@ -61,8 +61,8 @@ class SerdeTests: XCTestCase {
 
   func testUVarintRoundtrip() {
     let p = Pipe()
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     let tests: [UVarint] = [0x0, 0x1, 0x7F, 0x80, 0xFF, 0xFFF, 0xFFFFF]
     var buf = Data(count: 8192)
     for n in tests {
@@ -74,8 +74,8 @@ class SerdeTests: XCTestCase {
 
   func testArrayRoundtrip() {
     let p = Pipe()
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     let data: [String] = ["hello", "there"]
     var buf = Data(count: 8192)
     data.write(to: out)
@@ -86,8 +86,8 @@ class SerdeTests: XCTestCase {
 
   func testOptionalRoundtrip() {
     let p = Pipe()
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     var buf = Data(count: 8192)
 
     // empty
@@ -106,8 +106,8 @@ class SerdeTests: XCTestCase {
   func testStringSmallBuffer() {
     let p = Pipe()
     let s = "hello, world!"
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     var buf = Data(count: 5)
     s.write(to: out)
     out.flush()
@@ -118,8 +118,8 @@ class SerdeTests: XCTestCase {
   func testStringRoundtripPerformance() {
     let p = Pipe()
     let s = "hello, world!"
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     var buf = Data(count: 8192)
     let opts = XCTMeasureOptions()
     opts.iterationCount = 1000
@@ -136,8 +136,8 @@ class SerdeTests: XCTestCase {
       "a": UVarint(42),
       "b": UVarint(10)
     ]
-    let inp = InputPort(withHandle: p.fileHandleForReading)
-    let out = OutputPort(withHandle: p.fileHandleForWriting)
+    let inp = FileHandleInputPort(withHandle: p.fileHandleForReading)
+    let out = FileHandleOutputPort(withHandle: p.fileHandleForWriting)
     var buf = Data(count: 8192)
     v.write(to: out)
     out.flush()

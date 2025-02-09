@@ -32,7 +32,7 @@ public final class Backend: @unchecked Sendable {
   private var totalWriteNanos = UInt64(0)
 
   public init(withZo zo: URL, andMod modname: String, andProc proc: String) {
-    out = OutputPort(withHandle: ip.fileHandleForWriting)
+    out = FileHandleOutputPort(withHandle: ip.fileHandleForWriting)
     let server = Thread {
       self.serve(zo, modname, proc)
     }
@@ -61,7 +61,7 @@ public final class Backend: @unchecked Sendable {
   }
 
   private func read() {
-    let inp = InputPort(withHandle: op.fileHandleForReading)
+    let inp = FileHandleInputPort(withHandle: op.fileHandleForReading)
     var buf = Data(count: 8*1024) // will grow as needed
     while true {
       let id = UVarint.read(from: inp, using: &buf)
