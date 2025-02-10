@@ -115,6 +115,17 @@ class SerdeTests: XCTestCase {
     XCTAssertEqual(s.count, buf.count)
   }
 
+  func testStringSmallBufferViaDataPorts() {
+    let p = Pipe()
+    let s = "hello, world!"
+    let out = DataOutputPort()
+    s.write(to: out)
+    let inp = DataInputPort(data: out.data)
+    var buf = Data(count: 5)
+    XCTAssertEqual(s, String.read(from: inp, using: &buf))
+    XCTAssertEqual(s.count, buf.count)
+  }
+
   func testStringRoundtripPerformance() {
     let p = Pipe()
     let s = "hello, world!"
@@ -141,6 +152,20 @@ class SerdeTests: XCTestCase {
     var buf = Data(count: 8192)
     v.write(to: out)
     out.flush()
+    let r = [String: UVarint].read(from: inp, using: &buf)
+    XCTAssertEqual(v, r)
+  }
+
+  func testDictionaryRoundtripViaDataPorts() {
+    let p = Pipe()
+    let v = [
+      "a": UVarint(42),
+      "b": UVarint(10),
+    ]
+    let out = DataOutputPort()
+    v.write(to: out)
+    let inp = DataInputPort(data: out.data)
+    var buf = Data(count: 8192)
     let r = [String: UVarint].read(from: inp, using: &buf)
     XCTAssertEqual(v, r)
   }
