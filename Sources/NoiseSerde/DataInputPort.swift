@@ -1,5 +1,4 @@
 import Foundation
-import NoiseSerde
 
 /// An input port that reads from an in-memory buffer.
 public final class DataInputPort: InputPort {

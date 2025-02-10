@@ -1,5 +1,4 @@
 import Foundation
-import NoiseSerde
 
 /// An output port that buffers all writes into memory.
 public final class DataOutputPort: OutputPort {
