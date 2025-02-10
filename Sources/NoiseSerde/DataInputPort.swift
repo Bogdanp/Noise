@@ -11,7 +11,7 @@ public final class DataInputPort: InputPort {
 
   public func read(_ data: inout Data, count n: Int) -> Int {
     let n = min(self.data.count-pos, n)
-    data.withUnsafeMutableBytes{ buf in
+    _ = data.withUnsafeMutableBytes { (buf: UnsafeMutableRawBufferPointer) in
       self.data.copyBytes(to: buf, from: pos..<pos+n)
     }
     pos += n

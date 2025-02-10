@@ -116,7 +116,6 @@ class SerdeTests: XCTestCase {
   }
 
   func testStringSmallBufferViaDataPorts() {
-    let p = Pipe()
     let s = "hello, world!"
     let out = DataOutputPort()
     s.write(to: out)
@@ -157,7 +156,6 @@ class SerdeTests: XCTestCase {
   }
 
   func testDictionaryRoundtripViaDataPorts() {
-    let p = Pipe()
     let v = [
       "a": UVarint(42),
       "b": UVarint(10),
