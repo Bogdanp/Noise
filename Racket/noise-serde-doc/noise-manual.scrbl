@@ -16,7 +16,7 @@
 
 This is a companion package to @noise-anchor{Noise} that provides
 utilities for serializing and deserializing data structures between
-Swift and Racket.  Backwards-compatibility is not guaranteed.
+Swift and Racket.
 
 @(define ev
    (let ([ev (make-base-eval)])
