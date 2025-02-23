@@ -165,7 +165,7 @@
 
 ;; callout ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-rpc (install-callback [internalWithId id : UVarint]
-                              [andAddr addr : Varint])
+(define-rpc (install-callback [internal-with-id id : UVarint]
+                              [and-addr addr : Varint])
   (define cbox (callout-info-cbox (hash-ref callout-infos id)))
   (callout-box-install! cbox addr))
