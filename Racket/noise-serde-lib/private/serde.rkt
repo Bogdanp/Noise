@@ -158,7 +158,7 @@
   (make-provide-transformer
    (lambda (stx modes)
      (syntax-parse stx
-       [(_ id)
+       [(_ id:id)
         (define export-stx
           ((syntax-local-value #'id) 'provide-record))
         (expand-export export-stx modes)]))))
@@ -299,7 +299,7 @@
   (make-provide-transformer
    (lambda (stx modes)
      (syntax-parse stx
-       [(_ id)
+       [(_ id:id)
         (define export-stx
           ((syntax-local-value #'id) 'provide-enum))
         (expand-export export-stx modes)]))))
