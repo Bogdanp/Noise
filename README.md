@@ -4,18 +4,23 @@ Noise is a Swift wrapper around the [Racket] CS runtime intended to
 simplify embedding. See `Tests/NoiseTest/RacketTest.swift` for an
 example.
 
-## Usage
+## Quickstart
 
-Clone this repository locally and run `make`, then add it to your
-project as a local dependency. [Git LFS][LFS] is used to store the
-binary files in `Lib/` and in `Sources/Noise/boot`, so you will need
-have [LFS] installed in order to pull those files.
+1. Clone this repository.
+2. Run `raco pkg install Racket/noise-serde{-lib,-doc}/`.
+4. Run `make`.
+
+Note: [Git LFS][LFS] is used to store the binary files in `Lib/` and in
+`Sources/Noise/boot`, so you will need have [LFS] installed in order to
+pull those files.
+
+## Usage
 
 The shared libraries and the boot files must match the version of Racket
 you use to compile your Racket code. Most likely, the versions of the
-files checked into the master branch won't match your version of Racket.
-To import your own versions of these files, build Racket from source and
-run:
+files checked into the master branch _won't_ match your version of
+Racket, if you're using a release build of Racket. To import your own
+versions of these files, build Racket from source and run:
 
     ./Bin/copy-libs.sh arm64-macos /path/to/src/racket
 
@@ -38,7 +43,7 @@ to generate a portable bytecode build:
       --enable-racket=auto \
       --enable-libffi
 
-For the iPhone Simulator, change the `--enable-ios` flag to
+For the iPhone Simulator, change the value of the `--enable-ios` flag to
 `iPhoneSimulator`. After building for either platform, you need to merge
 the associated `libffi` archive into the generated `libracketcs.a`. For
 example:
@@ -70,7 +75,7 @@ The `NoiseSerde` package and its associated `noise/serde` module (from
 can automatically be shared (via serialization & deserialization)
 between Racket and Swift.
 
-To use `NoiseSerde` from racket, you will have to install
+To use `NoiseSerde` from Racket, you will have to install
 `noise-serde-lib`:
 
     raco pkg install Racket/noise-serde-lib/
@@ -78,6 +83,8 @@ To use `NoiseSerde` from racket, you will have to install
 You may also want to install its docs:
 
     raco pkg install Racket/noise-serde-doc/
+
+Run `raco docs noise` to read the docs.
 
 ## NoiseBackend
 
