@@ -1,3 +1,10 @@
+.PHONY: all
+all: deps mods.zo
+
+.PHONY: deps
+deps:
+	raco pkg install --auto --skip-installed http-easy-lib
+
 mods.zo: *.rkt
 	raco ctool \
 		--runtime runtime \
