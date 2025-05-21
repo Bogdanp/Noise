@@ -12,7 +12,7 @@ jobs:
         run: swift --version
 
       - name: Setup Racket
-        uses: Bogdanp/setup-racket@v1.11
+        uses: Bogdanp/setup-racket@v1.13
         with:
           variant: 'CS'
           version: 'current'

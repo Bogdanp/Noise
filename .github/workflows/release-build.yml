@@ -1,0 +1,181 @@
+name: Build Release
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Racket Version"
+        required: true
+        type: string
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target-os: ["iOS", "iPhoneSimulator", "macOS"]
+        target-arch: ["aarch64", "x86_64"]
+        builder: ["macos-13", "macos-14"]
+        exclude:
+          - target-os: iOS
+            builder: macos-13
+          - target-os: iOS
+            target-arch: x86_64
+          - target-os: iPhoneSimulator
+            builder: macos-13
+          - target-os: iPhoneSimulator
+            target-arch: x86_64
+          - builder: macos-14
+            target-arch: x86_64
+          - builder: macos-13
+            target-arch: aarch64
+    runs-on: ${{ matrix.builder }}
+    name: "racket-${{ inputs.version || '8.17' }}-${{ matrix.target-os }}-${{ matrix.target-arch}}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Check Swift Version
+        run: swift --version
+
+      - name: Install Host Racket
+        if: ${{ startsWith(matrix.target-os, 'i') }}
+        uses: Bogdanp/setup-racket@v1.13
+        with:
+          variant: "CS"
+          version: "current"
+
+      - name: Build LibFFI for iOS
+        if: ${{ matrix.target-os == 'iOS' }}
+        run: |
+          set -euxo pipefail
+          brew install automake libtool
+          git clone https://github.com/libffi/libffi
+          cd libffi
+          git checkout v3.4.8
+          ./autogen.sh
+          python generate-darwin-source-and-headers.py --only-ios
+          xcodebuild \
+            -configuration release \
+            -target libffi-iOS \
+            -scheme libffi-iOS \
+            -sdk "$(xcode-select -p)/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk" \
+            -derivedDataPath dist \
+            IPHONEOS_DEPLOYMENT_TARGET=12
+
+      - name: Build LibFFI for iPhoneSimulator
+        if: ${{ matrix.target-os == 'iPhoneSimulator' }}
+        run: |
+          set -euxo pipefail
+          brew install automake libtool
+          git clone https://github.com/libffi/libffi
+          cd libffi
+          git checkout v3.4.8
+          curl https://gist.githubusercontent.com/Bogdanp/ea344f45015ee32576639dc402aeca11/raw/f075ec2adb655789019fdd5a94c521ea2579552d/0001-add-tramp.c-to-x86_64-for-iPhoneSimulator.patch | \
+            git apply -
+          ./autogen.sh
+          python generate-darwin-source-and-headers.py --only-ios
+          xcodebuild \
+            -configuration release \
+            -target libffi-iOS \
+            -scheme libffi-iOS \
+            -sdk "$(xcode-select -p)/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk" \
+            -derivedDataPath dist
+
+      - name: Download and Untar Racket
+        run: |
+          curl -L -o racket.tar.gz https://download.racket-lang.org/installers/${{ inputs.version || '8.17' }}/racket-minimal-${{ inputs.version || '8.17' }}-src-builtpkgs.tgz
+          tar xzf racket.tar.gz
+
+      - name: Build Racket for macOS
+        if: ${{ matrix.target-os == 'macOS' }}
+        run: |
+          pushd racket-${{ inputs.version || '8.17' }}
+          pushd src
+          export LD_LIBRARY_PATH="$(brew --prefix)/lib:$LD_LIBRARY_PATH"
+          export DYLD_LIBRARY_PATH="$(brew --prefix)/lib:$DYLD_LIBRARY_PATH"
+          export MACOSX_DEPLOYMENT_TARGET=12.0
+          export PKG_CONFIG_PATH=$(pwd)
+          ./configure \
+            --enable-compressboot \
+            --enable-strip
+          make
+          make install
+
+      - name: Build Racket for iOS
+        if: ${{ matrix.target-os == 'iOS' }}
+        run: |
+          pushd racket-${{ inputs.version || '8.17' }}
+          pushd src
+          cat >libffi.pc <<EOF
+            prefix=${GITHUB_WORKSPACE}/libffi/dist/Build/Products/Release-iphoneos
+            exec_prefix=\${prefix}
+            libdir=\${exec_prefix}
+            toolexeclibdir=\${libdir}
+            includedir=\${prefix}/include/ffi
+
+            Name: libffi
+            Description: Library supporting Foreign Function Interfaces
+            Version: 3.4.8
+            Libs: -L\${toolexeclibdir} -lffi
+            Cflags: -I\${includedir}
+          EOF
+          cat libffi.pc
+          export LD_LIBRARY_PATH="$(brew --prefix)/lib:$LD_LIBRARY_PATH"
+          export DYLD_LIBRARY_PATH="$(brew --prefix)/lib:$DYLD_LIBRARY_PATH"
+          export MACOSX_DEPLOYMENT_TARGET=12.0
+          export PKG_CONFIG_PATH=$(pwd)
+          ./configure \
+            --host=aarch64-apple-darwin \
+            --enable-ios=iPhoneOS \
+            --enable-pb \
+            --enable-racket=auto \
+            --enable-libffi \
+            --enable-compressboot \
+            --enable-strip
+          make
+          make install
+          popd
+          libtool -s -o lib/libracketcs1.a lib/libracketcs.a ../libffi/dist/Build/Products/Release-iphoneos/libffi.a
+          mv lib/libracketcs{1,}.a
+
+      - name: Build Racket for iPhoneSimulator
+        if: ${{ matrix.target-os == 'iPhoneSimulator' }}
+        run: |
+          pushd racket-${{ inputs.version || '8.17' }}
+          pushd src
+          cat >libffi.pc <<EOF
+            prefix=${GITHUB_WORKSPACE}/libffi/dist/Build/Products/Release-iphonesimulator
+            exec_prefix=\${prefix}
+            libdir=\${exec_prefix}
+            toolexeclibdir=\${libdir}
+            includedir=\${prefix}/include/ffi
+
+            Name: libffi
+            Description: Library supporting Foreign Function Interfaces
+            Version: 3.4.8
+            Libs: -L\${toolexeclibdir} -lffi
+            Cflags: -I\${includedir}
+          EOF
+          cat libffi.pc
+          export LD_LIBRARY_PATH="$(brew --prefix)/lib:$LD_LIBRARY_PATH"
+          export DYLD_LIBRARY_PATH="$(brew --prefix)/lib:$DYLD_LIBRARY_PATH"
+          export PKG_CONFIG_PATH=$(pwd)
+          ./configure \
+            --host=aarch64-apple-darwin \
+            --enable-ios=iPhoneSimulator \
+            --enable-pb \
+            --enable-racket=auto \
+            --enable-libffi \
+            --enable-compressboot \
+            --enable-strip
+          make
+          make install
+          popd
+          libtool -s -o lib/libracketcs1.a lib/libracketcs.a ../libffi/dist/Build/Products/Release-iphonesimulator/libffi.a
+          mv lib/libracketcs{1,}.a
+
+      - name: Upload Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: "racket-${{ inputs.version || '8.17' }}-${{ matrix.target-os }}-${{ matrix.target-arch }}"
+          path: "racket-${{ inputs.version || '8.17' }}"
