@@ -207,6 +207,8 @@ jobs:
       - name: Commit & Push
         run: |
           set -euo pipefail
+          git config user.name gha
+          git config user.email gha@github.com
           git add Lib Sources
           git commit -am "build: sync racket-${{ inputs.version || '8.17' }}"
           git push origin ${{ inputs.branch }}
