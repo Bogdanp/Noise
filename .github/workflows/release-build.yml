@@ -2,6 +2,10 @@ name: Build Release
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: "Target Branch"
+        required: false
+        type: string
       version:
         description: "Racket Version"
         required: true
@@ -28,7 +32,7 @@ jobs:
           - builder: macos-13
             target-arch: aarch64
     runs-on: ${{ matrix.builder }}
-    name: "racket-${{ inputs.version || '8.17' }}-${{ matrix.target-os }}-${{ matrix.target-arch}}"
+    name: "Build racket-${{ inputs.version || '8.17' }}-${{ matrix.target-arch}}-${{ matrix.target-os }}"
     steps:
       - name: Checkout
         uses: actions/checkout@master
@@ -176,5 +180,33 @@ jobs:
       - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
-          name: "racket-${{ inputs.version || '8.17' }}-${{ matrix.target-os }}-${{ matrix.target-arch }}"
+          name: "racket-${{ inputs.version || '8.17' }}-${{ matrix.target-arch }}-${{ matrix.target-os }}"
           path: "racket-${{ inputs.version || '8.17' }}"
+
+  branch:
+    if: "${{ inputs.branch }}"
+    name: "Create Release Branch ${{ inputs.branch }}"
+    needs: [build]
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Download Builds
+        uses: actions/download-artifact@v4
+
+      - name: Branch
+        run: |
+          set -euo pipefail
+          git checkout -b ${{ inputs.branch }}
+          ./Bin/copy-libs.sh arm64-ios racket-${{ inputs.version || '8.17' }}-aarch64-iOS/
+          ./Bin/copy-libs.sh arm64-iphonesimulator racket-${{ inputs.version || '8.17' }}-aarch64-iPhoneSimulator/
+          ./Bin/copy-libs.sh arm64-macos racket-${{ inputs.version || '8.17' }}-aarch64-macOS/
+          ./Bin/copy-libs.sh x86_64-macos racket-${{ inputs.version || '8.17' }}-x86_64-macOS/
+
+      - name: Commit & Push
+        run: |
+          set -euo pipefail
+          git add Lib Sources
+          git commit -am "build: sync racket-${{ inputs.version || '8.17' }}"
+          git push origin ${{ inputs.branch }}
