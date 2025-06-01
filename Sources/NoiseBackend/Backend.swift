@@ -165,7 +165,7 @@ fileprivate struct Duration: CustomStringConvertible {
   let nanos: UInt64
 
   var description: String {
-    if nanos > 1_000_000_000 {
+    if nanos > 10_000_000_000 {
       return "\(nanos/1_000_000_000)s"
     } else if nanos > 1_000_000 {
       return "\(nanos/1_000_000)ms"
