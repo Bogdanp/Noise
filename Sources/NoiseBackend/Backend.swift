@@ -48,9 +48,17 @@ public final class Backend: @unchecked Sendable {
   }
 
   private func serve(_ zo: URL, _ modname: String, _ proc: String) {
+    logger.debug("\(#function): booting Racket")
+    let t0 = DispatchTime.now()
     let r = Racket(execPath: zo.path)
+    let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
+    logger.debug("\(#function): took \(Duration(nanos: dt)) to boot Racket")
     r.bracket {
+      logger.debug("\(#function): loading backend")
+      let t0 = DispatchTime.now()
       r.load(zo: zo)
+      let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
+      logger.debug("\(#function): took \(Duration(nanos: dt)) to load backend")
       let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol(modname), Val.null))
       let ifd = Val.fixnum(Int(ip.fileHandleForReading.fileDescriptor))
       let ofd = Val.fixnum(Int(op.fileHandleForWriting.fileDescriptor))
