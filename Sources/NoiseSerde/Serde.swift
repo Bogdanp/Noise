@@ -266,7 +266,7 @@ extension String: Readable, Writable {
 public typealias Symbol = String
 
 // MARK: - Array
-extension Array where Element: Readable, Element: Writable {
+extension Array: Readable where Element: Readable {
   public static func read(from inp: InputPort, using buf: inout Data) -> [Element] {
     let len = Varint.read(from: inp, using: &buf)
     assert(len >= 0)
@@ -280,7 +280,9 @@ extension Array where Element: Readable, Element: Writable {
     }
     return res
   }
+}
 
+extension Array: Writable where Element: Writable {
   public func write(to out: OutputPort) {
     Varint(count).write(to: out)
     for r in self {
@@ -290,7 +292,7 @@ extension Array where Element: Readable, Element: Writable {
 }
 
 // MARK: - Dictionary
-extension Dictionary where Key: Readable, Key: Writable, Value: Readable, Value: Writable {
+extension Dictionary: Readable where Key: Readable, Value: Readable {
   public static func read(from inp: InputPort, using buf: inout Data) -> [Key: Value] {
     let len = Varint.read(from: inp, using: &buf)
     assert(len >= 0)
@@ -306,7 +308,9 @@ extension Dictionary where Key: Readable, Key: Writable, Value: Readable, Value:
     }
     return res
   }
+}
 
+extension Dictionary: Writable where Key: Writable, Value: Writable {
   public func write(to out: OutputPort) {
     Varint(count).write(to: out)
     for (k, v) in self {
@@ -317,14 +321,16 @@ extension Dictionary where Key: Readable, Key: Writable, Value: Readable, Value:
 }
 
 // MARK: - Optional
-extension Optional where Wrapped: Readable, Wrapped: Writable {
+extension Optional: Readable where Wrapped: Readable {
   public static func read(from inp: InputPort, using buf: inout Data) -> Wrapped? {
     if inp.readByte() == 0 {
       return nil
     }
     return Wrapped.read(from: inp, using: &buf)
   }
+}
 
+extension Optional: Writable where Wrapped: Writable {
   public func write(to out: OutputPort) {
     switch self {
     case .none:
