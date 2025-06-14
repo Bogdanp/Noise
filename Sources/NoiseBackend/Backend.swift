@@ -12,9 +12,9 @@ fileprivate let logger = Logger(
 /// Statistics reported by Backends.
 public struct BackendStats: Sendable {
   public let totalRequests: UInt64
-  public let totalWaitNanos: UInt64
-  public let totalReadNanos: UInt64
-  public let totalWriteNanos: UInt64
+  public let totalWaitDuration: Duration
+  public let totalReadDuration: Duration
+  public let totalWriteDuration: Duration
 }
 
 /// Client implementation for an async Racket backend.
@@ -27,9 +27,9 @@ public final class Backend: @unchecked Sendable {
   private var seq = UVarint(0)
   fileprivate var pending = [UInt64: ResponseHandler]()
   private var totalRequests = UInt64(0)
-  private var totalWaitNanos = UInt64(0)
-  private var totalReadNanos = UInt64(0)
-  private var totalWriteNanos = UInt64(0)
+  private var totalWaitDuration = Duration.zero
+  private var totalReadDuration = Duration.zero
+  private var totalWriteDuration = Duration.zero
 
   public init(withZo zo: URL, andMod modname: String, andProc proc: String) {
     out = FileHandleOutputPort(withHandle: ip.fileHandleForWriting)
@@ -49,16 +49,16 @@ public final class Backend: @unchecked Sendable {
 
   private func serve(_ zo: URL, _ modname: String, _ proc: String) {
     logger.debug("\(#function): booting Racket")
-    let t0 = DispatchTime.now()
+    let t0 = ContinuousClock.now
     let r = Racket(execPath: zo.path)
-    let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
-    logger.debug("\(#function): took \(Duration(nanos: dt)) to boot Racket")
+    let dt = ContinuousClock.now - t0
+    logger.debug("\(#function): took \(dt) to boot Racket")
     r.bracket {
       logger.debug("\(#function): loading backend")
-      let t0 = DispatchTime.now()
+      let t0 = ContinuousClock.now
       r.load(zo: zo)
-      let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
-      logger.debug("\(#function): took \(Duration(nanos: dt)) to load backend")
+      let dt = ContinuousClock.now - t0
+      logger.debug("\(#function): took \(dt) to load backend")
       let mod = Val.cons(Val.symbol("quote"), Val.cons(Val.symbol(modname), Val.null))
       let ifd = Val.fixnum(Int(ip.fileHandleForReading.fileDescriptor))
       let ofd = Val.fixnum(Int(op.fileHandleForWriting.fileDescriptor))
@@ -85,12 +85,12 @@ public final class Backend: @unchecked Sendable {
       //logger.debug("\(RequestId(value: id)): took \(Duration(nanos: readDuration), privacy: .public) to read")
       mu.wait()
       pending.removeValue(forKey: id)
-      let requestDuration = DispatchTime.now().uptimeNanoseconds - handler.time.uptimeNanoseconds
+      let requestDuration = ContinuousClock.now - handler.time
       totalRequests += 1
-      totalWaitNanos += requestDuration
-      totalReadNanos += readDuration
+      totalWaitDuration += requestDuration
+      totalReadDuration += readDuration
       mu.signal()
-      logger.debug("\(RequestId(value: id)): took \(Duration(nanos: requestDuration), privacy: .public) to fulfill")
+      logger.debug("\(RequestId(value: id)): took \(requestDuration) to fulfill")
     }
   }
 
@@ -103,15 +103,15 @@ public final class Backend: @unchecked Sendable {
     let id = seq
     seq += 1
     logger.debug("\(RequestId(value: id)): \(commandName)")
-    let t0 = DispatchTime.now()
+    let t0 = ContinuousClock.now
     id.write(to: out)
     write(out)
     out.flush()
-    let dt = DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
+    let dt = ContinuousClock.now - t0
     let fut = Future<String, T>()
     let handler = ResponseHandlerImpl<T>(id: id, fut: fut, read: read)
     pending[id] = handler
-    totalWriteNanos += dt
+    totalWriteDuration += dt
     mu.signal()
     return fut
   }
@@ -121,9 +121,9 @@ public final class Backend: @unchecked Sendable {
     defer { mu.signal() }
     return BackendStats(
       totalRequests: totalRequests,
-      totalWaitNanos: totalWaitNanos,
-      totalReadNanos: totalReadNanos,
-      totalWriteNanos: totalWriteNanos
+      totalWaitDuration: totalWaitDuration,
+      totalReadDuration: totalReadDuration,
+      totalWriteDuration: totalWriteDuration
     )
   }
 }
@@ -139,25 +139,25 @@ fileprivate struct Request<Data: Writable>: Writable {
 }
 
 fileprivate protocol ResponseHandler {
-  var time: DispatchTime { get }
+  var time: ContinuousClock.Instant { get }
 
-  func handle(from inp: InputPort, using buf: inout Data) -> UInt64
+  func handle(from inp: InputPort, using buf: inout Data) -> Duration
 }
 
 fileprivate struct ResponseHandlerImpl<T>: ResponseHandler where T: Sendable {
   let id: UInt64
   let fut: Future<String, T>
   let read: (InputPort, inout Data) -> T
-  let time = DispatchTime.now()
+  let time = ContinuousClock.now
 
-  func handle(from inp: InputPort, using buf: inout Data) -> UInt64 {
-    let t0 = DispatchTime.now()
+  func handle(from inp: InputPort, using buf: inout Data) -> Duration {
+    let t0 = ContinuousClock.now
     if inp.readByte() == 1 {
       fut.resolve(with: read(inp, &buf))
     } else {
       fut.reject(with: String.read(from: inp, using: &buf))
     }
-    return DispatchTime.now().uptimeNanoseconds - t0.uptimeNanoseconds
+    return ContinuousClock.now - t0
   }
 }
 
@@ -166,20 +166,5 @@ fileprivate struct RequestId: CustomStringConvertible {
 
   var description: String {
     return String(format: "#%06d", value)
-  }
-}
-
-fileprivate struct Duration: CustomStringConvertible {
-  let nanos: UInt64
-
-  var description: String {
-    if nanos > 10_000_000_000 {
-      return "\(nanos/1_000_000_000)s"
-    } else if nanos > 1_000_000 {
-      return "\(nanos/1_000_000)ms"
-    } else if nanos > 1_000 {
-      return "\(nanos/1_000)µs"
-    }
-    return "\(nanos)ns"
   }
 }
