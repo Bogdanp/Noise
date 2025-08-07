@@ -6,13 +6,13 @@
  make-sequencer
  sequencer-add!)
 
-(struct sequencer (ht name-proc [names #:mutable] update!-proc))
+(struct sequencer (ht name-proc [names #:mutable] set-id!-proc))
 
-(define (make-sequencer ht name-proc update!-proc)
-  (sequencer ht name-proc null update!-proc))
+(define (make-sequencer ht name-proc set-id!-proc)
+  (sequencer ht name-proc null set-id!-proc))
 
 (define (sequencer-add! s v)
-  (match-define (sequencer ht name-proc names update!-proc) s)
+  (match-define (sequencer ht name-proc names set-id!-proc) s)
   (define name (name-proc v))
   (unless (symbol? name)
     (raise-argument-error 'sequencer-next! "(symbol? (name-proc v))" v))
@@ -29,5 +29,13 @@
   (hash-clear! ht)
   (for ([v (in-list (cons v vs))])
     (define id (hash-ref new-ids (name-proc v)))
-    (update!-proc v id)
+    (set-id!-proc v id)
     (hash-set! ht id v)))
+
+(module+ test
+  (require rackunit)
+  (define ht (make-hasheqv))
+  (define seq (make-sequencer ht values void))
+  (for ([idx (in-range 1000)])
+    (sequencer-add! seq (string->symbol (format "~a" idx))))
+  (check-equal? (hash-ref ht 999) '|999|))
