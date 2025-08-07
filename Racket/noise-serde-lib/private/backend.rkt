@@ -9,19 +9,15 @@
 (provide
  define-rpc
 
- rpc-infos
+ get-rpc-infos
  (struct-out rpc-arg)
  (struct-out rpc-info))
 
 (struct rpc-arg (label name type))
 (struct rpc-info ([id #:mutable] name args response-type proc))
 
-(define rpc-infos (make-hasheqv))
-(define rpc-info-sequencer
-  (make-sequencer
-   rpc-infos
-   rpc-info-name
-   set-rpc-info-id!))
+(define-values (save-rpc-info! get-rpc-infos)
+  (make-sequencer rpc-info-name set-rpc-info-id!))
 
 (begin-for-syntax
   (define-syntax-class arg
@@ -51,6 +47,6 @@
              (rpc-arg l n (->field-type 'Backend t))))
          (define info
            (rpc-info #f 'name args response-type name))
-         (sequencer-add! rpc-info-sequencer info)
+         (save-rpc-info! info)
          #,(when (eq? (syntax-local-context) 'module)
              #'(module+ rpc (provide name))))]))

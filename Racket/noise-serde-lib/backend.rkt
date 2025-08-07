@@ -15,6 +15,7 @@
  serve)
 
 (define (serve in-fd out-fd)
+  (define rpc-infos (get-rpc-infos))
   (define cust (make-custodian))
   (define thd
     (parameterize ([current-custodian cust])
@@ -167,5 +168,6 @@
 
 (define-rpc (install-callback [internal-with-id id : UVarint]
                               [and-addr addr : Varint])
+  (define callout-infos (get-callout-infos))
   (define cbox (callout-info-cbox (hash-ref callout-infos id)))
   (callout-box-install! cbox addr))

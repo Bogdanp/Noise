@@ -12,19 +12,15 @@
 (provide
  define-callout
 
- callout-infos
+ get-callout-infos
  (struct-out callout-arg)
  (struct-out callout-info))
 
 (struct callout-arg (name type))
 (struct callout-info ([id #:mutable] name args cbox))
 
-(define callout-infos (make-hasheqv))
-(define callout-info-sequencer
-  (make-sequencer
-   callout-infos
-   callout-info-name
-   set-callout-info-id!))
+(define-values (save-callout-info! get-callout-infos)
+  (make-sequencer callout-info-name set-callout-info-id!))
 
 (define-syntax (define-callout stx)
   (syntax-parse stx
@@ -43,7 +39,7 @@
            (make-callout-box callout-type))
          (define info
            (callout-info #f 'name args cbox))
-         (sequencer-add! callout-info-sequencer info))]))
+         (save-callout-info! info))]))
 
 (define callout-type
   (_fun _int _size _bytes -> _void))

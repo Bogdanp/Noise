@@ -48,7 +48,7 @@
       (write-field type value out))))
 
 (provide
- record-infos
+ get-record-infos
  (struct-out record-info)
  (struct-out record-field))
 
@@ -56,12 +56,8 @@
   #:property prop:procedure (struct-field-index constructor))
 (struct record-field (id type mutable? accessor))
 
-(define record-infos (make-hasheqv))
-(define record-info-sequencer
-  (make-sequencer
-   record-infos
-   record-info-name
-   set-record-info-id!))
+(define-values (store-record-info! get-record-infos)
+  (make-sequencer record-info-name set-record-info-id!))
 
 (begin-for-syntax
   (define-syntax-class protocol
@@ -147,7 +143,7 @@
            (let ([protocols {~? (list proto.e ...) null}]
                  [fields (list (record-field 'fld.id (->field-type 'Record fld.ft) fld.mut? fld-accessor-id) ...)])
              (record-info #f 'name -name protocols fields)))
-         (sequencer-add! record-info-sequencer info)
+         (store-record-info! info)
          (define/contract (constructor-id constructor-arg ...)
            (->* (required-ctor-arg-ctc ...)
                 (optional-ctor-arg-ctc ...)
@@ -216,7 +212,7 @@
       (write-field type value out))))
 
 (provide
- enum-infos
+ get-enum-infos
  (struct-out enum-info)
  (struct-out enum-variant)
  (struct-out enum-variant-field))
@@ -225,12 +221,8 @@
 (struct enum-variant (id name constructor fields))
 (struct enum-info ([id #:mutable] name protocols variants))
 
-(define enum-infos (make-hasheqv))
-(define enum-info-sequencer
-  (make-sequencer
-   enum-infos
-   enum-info-name
-   set-enum-info-id!))
+(define-values (store-enum-info! get-enum-infos)
+  (make-sequencer enum-info-name set-enum-info-id!))
 
 (define-syntax (define-enum stx)
   (define-syntax-class enum-variant
@@ -293,7 +285,7 @@
                variant.fld-accessor-id) ...)) ...))
          (define info
            (enum-info #f 'name protocols variants))
-         (sequencer-add! enum-info-sequencer info))]))
+         (store-enum-info! info))]))
 
 (define-syntax enum-out
   (make-provide-transformer

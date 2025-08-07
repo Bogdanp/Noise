@@ -36,11 +36,13 @@
     (fprintf out "import NoiseBackend~n"))
   (fprintf out "import NoiseSerde~n")
 
+  (define enum-infos (get-enum-infos))
   (for ([id (in-list (sort (hash-keys enum-infos) <) )])
     (define e (hash-ref enum-infos id))
     (fprintf out "~n")
     (write-enum-code e out))
 
+  (define record-infos (get-record-infos))
   (for ([id (in-list (sort (hash-keys record-infos) <))])
     (define r (hash-ref record-infos id))
     (fprintf out "~n")
@@ -174,6 +176,7 @@
   (fprintf out "    impl = NoiseBackend.Backend(withZo: zo, andMod: mod, andProc: proc)~n")
   (fprintf out "  }~n")
 
+  (define rpc-infos (get-rpc-infos))
   (define sorted-rpc-ids (sort (hash-keys rpc-infos) <))
   (for ([id (in-list sorted-rpc-ids)])
     (match-define (rpc-info _ name args type _proc)
@@ -222,6 +225,7 @@
     (fprintf out "    return try await FutureUtil.asyncify(~a(~a))~n" (~name name) arg-pairs-str)
     (fprintf out "  }~n"))
 
+  (define callout-infos (get-callout-infos))
   (define sorted-callout-ids (sort (hash-keys callout-infos) <))
   (for ([id (in-list sorted-callout-ids)])
     (match-define (callout-info _ name args _cbox)

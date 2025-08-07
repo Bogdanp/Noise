@@ -1,41 +1,63 @@
 #lang racket/base
 
-(require racket/match)
+(require racket/match
+         racket/promise)
 
 (provide
- make-sequencer
- sequencer-add!)
+ make-sequencer)
 
-(struct sequencer (ht name-proc [names #:mutable] set-id!-proc))
+(struct sequencer
+  (name-proc
+   [names #:mutable]
+   set!-proc
+   [finalized? #:mutable]))
 
-(define (make-sequencer ht name-proc set-id!-proc)
-  (sequencer ht name-proc null set-id!-proc))
+(define (make-sequencer name-proc set!-proc)
+  (define seq
+    (sequencer
+     #;name-proc name-proc
+     #;names (hasheq)
+     #;set!-proc set!-proc
+     #;finalized? #f))
+  (define ht-promise
+    (delay/sync
+     (finalize-sequencer seq)))
+  (values
+   (λ (v) (sequencer-add! seq v))
+   (λ () (force ht-promise))))
 
 (define (sequencer-add! s v)
-  (match-define (sequencer ht name-proc names set-id!-proc) s)
+  (match-define (sequencer name-proc names _ finalized?) s)
+  (when finalized?
+    (raise-user-error 'sequencer-add! "sequencer already finalized"))
   (define name (name-proc v))
   (unless (symbol? name)
     (raise-argument-error 'sequencer-next! "(symbol? (name-proc v))" v))
-  (when (memq name names)
+  (when (hash-has-key? names name)
     (error 'sequencer-next! "duplicate name ~s" name))
-  (define new-names
-    (sort (cons name names) symbol<?))
-  (set-sequencer-names! s new-names)
-  (define new-ids
-    (for/hasheq ([name (in-list new-names)]
+  (set-sequencer-names! s (hash-set names name v)))
+
+(define (finalize-sequencer s)
+  (match-define (sequencer _ names set!-proc _) s)
+  (define sorted-names
+    (sort (hash-keys names) symbol<?))
+  (define ht
+    (for/hasheq ([name (in-list sorted-names)]
                  [id (in-naturals)])
-      (values name id)))
-  (define vs (hash-values ht))
-  (hash-clear! ht)
-  (for ([v (in-list (cons v vs))])
-    (define id (hash-ref new-ids (name-proc v)))
-    (set-id!-proc v id)
-    (hash-set! ht id v)))
+      (define v (hash-ref names name))
+      (set!-proc v id)
+      (values id v)))
+  (set-sequencer-finalized?! s #t)
+  ht)
 
 (module+ test
   (require rackunit)
-  (define ht (make-hasheqv))
-  (define seq (make-sequencer ht values void))
+  (define-values (save! get-ht)
+    (make-sequencer values void))
   (for ([idx (in-range 1000)])
-    (sequencer-add! seq (string->symbol (format "~a" idx))))
-  (check-equal? (hash-ref ht 999) '|999|))
+    (save! (string->symbol (format "~a" idx))))
+  (define ht (get-ht))
+  (check-equal? (hash-ref ht 999) '|999|)
+  (check-exn
+   #rx"sequencer already finalized"
+   (λ () (save! '|1000|))))
