@@ -100,7 +100,8 @@ jobs:
           export PKG_CONFIG_PATH=$(pwd)
           ./configure \
             --enable-compressboot \
-            --enable-strip
+            --enable-strip \
+            --enable-missingpkgs
           make
           make install
 
