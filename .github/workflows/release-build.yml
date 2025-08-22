@@ -94,10 +94,7 @@ jobs:
         run: |
           pushd racket-${{ inputs.version || '8.17' }}
           pushd src
-          export LD_LIBRARY_PATH="$(brew --prefix)/lib:$LD_LIBRARY_PATH"
-          export DYLD_LIBRARY_PATH="$(brew --prefix)/lib:$DYLD_LIBRARY_PATH"
           export MACOSX_DEPLOYMENT_TARGET=12.0
-          export PKG_CONFIG_PATH=$(pwd)
           ./configure \
             --enable-compressboot \
             --enable-strip
