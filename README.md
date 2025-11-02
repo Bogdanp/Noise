@@ -57,9 +57,10 @@ example:
 Pre-compiled builds for recent versions of Racket are available on the
 following branches:
 
+* `racket-8.18`
 * `racket-8.17`
 * `racket-8.16`
-* `racket-8.15` (first branch to include iOS build)
+* `racket-8.15` (first branch to include an iOS build)
 * `racket-8.14`
 * `racket-8.13`
 * `racket-8.12`
