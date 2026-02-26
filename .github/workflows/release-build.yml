@@ -17,19 +17,19 @@ jobs:
       matrix:
         target-os: ["iOS", "iPhoneSimulator", "macOS"]
         target-arch: ["aarch64", "x86_64"]
-        builder: ["macos-13", "macos-14"]
+        builder: ["macos-14", "macos-14-large"] # large=x64
         exclude:
           - target-os: iOS
-            builder: macos-13
+            builder: macos-14-large
           - target-os: iOS
             target-arch: x86_64
           - target-os: iPhoneSimulator
-            builder: macos-13
+            builder: macos-14-large
           - target-os: iPhoneSimulator
             target-arch: x86_64
           - builder: macos-14
             target-arch: x86_64
-          - builder: macos-13
+          - builder: macos-14-large
             target-arch: aarch64
     runs-on: ${{ matrix.builder }}
     name: "Build racket-${{ inputs.version || '8.17' }}-${{ matrix.target-arch}}-${{ matrix.target-os }}"
