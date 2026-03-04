@@ -1,5 +1,7 @@
-*.xcframework
 .build/
 .swiftpm/
+*.xcframework
 build/
 compiled/
+Derived/
+Noise.xcodeproj/
