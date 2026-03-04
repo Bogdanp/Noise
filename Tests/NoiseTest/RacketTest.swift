@@ -16,7 +16,7 @@ class RacketTest: XCTestCase {
       .appendingPathComponent("cookie")
       .path
 
-    r = Racket(execPath: cookiePath)
+    r = Racket(args: .init(execPath: cookiePath))
     r.bracket {
       r.load(zo: Bundle.module.url(forResource: "Modules/mods", withExtension: "zo")!)
     }

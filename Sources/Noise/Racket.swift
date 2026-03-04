@@ -21,6 +21,31 @@ let OS = "ios"
 #error("unsupported OS")
 #endif
 
+/// Racket boot arguments.
+///
+/// Configure the Racket runtime on boot.
+public struct BootArguments: Sendable {
+  public var argv: [String]
+  public var execPath: String
+  public var runFile: String?
+  public var collectsDir: String?
+  public var configDir: String?
+
+  public init(
+    argv: [String] = ["-n"],
+    execPath: String = "racket",
+    runFile: String? = nil,
+    collectsDir: String? = nil,
+    configDir: String? = nil
+  ) {
+    self.argv = argv
+    self.execPath = execPath
+    self.runFile = runFile
+    self.collectsDir = collectsDir
+    self.configDir = configDir
+  }
+}
+
 /// The Racket runtime.
 ///
 /// # Threading
@@ -32,15 +57,28 @@ let OS = "ios"
 ///
 /// - Warning: Only one instance may be created per process.
 public struct Racket {
-  public init(execPath: String = "racket") {
+  public init(args ba: BootArguments) {
     var args = racket_boot_arguments_t()
-    args.exec_file = execPath.utf8CString.cstring()
+    args.argc = Int32(ba.argv.count)
+    let argvbuf = UnsafeMutableBufferPointer<UnsafeMutablePointer<CChar>?>.allocate(capacity: ba.argv.count)
+    let argvcstrings: [UnsafeMutablePointer<CChar>?] = ba.argv.map { $0.utf8CString.mutableCstring() }
+    argvbuf.baseAddress!.initialize(from: argvcstrings, count: ba.argv.count)
+    args.argv = argvbuf.baseAddress
+    args.exec_file = ba.execPath.utf8CString.cstring()
+    if let runFile = ba.runFile { args.run_file = runFile.utf8CString.cstring() }
+    if let collectsDir = ba.collectsDir { args.collects_dir = collectsDir.utf8CString.cstring() }
+    if let configDir = ba.configDir { args.config_dir = configDir.utf8CString.cstring() }
     args.boot1_path = NoiseBoot.petiteURL.path.utf8CString.cstring()
     args.boot2_path = NoiseBoot.schemeURL.path.utf8CString.cstring()
     args.boot3_path = NoiseBoot.racketURL.path.utf8CString.cstring()
     racket_boot(&args)
     racket_deactivate_thread()
+    argvbuf.deallocate()
+    argvcstrings.forEach { $0?.deallocate() }
     args.exec_file.deallocate()
+    if ba.runFile != nil { args.run_file.deallocate() }
+    if ba.collectsDir != nil { args.collects_dir.deallocate() }
+    if ba.configDir != nil { args.config_dir.deallocate() }
     args.boot1_path.deallocate()
     args.boot2_path.deallocate()
     args.boot3_path.deallocate()
@@ -317,11 +355,15 @@ public struct Val {
 }
 
 fileprivate extension ContiguousArray where Element == CChar {
-  func cstring() -> UnsafePointer<CChar> {
+  func mutableCstring() -> UnsafeMutablePointer<CChar> {
     let p = UnsafeMutablePointer<CChar>.allocate(capacity: self.underestimatedCount)
     self.withUnsafeBufferPointer { ptr in
       p.initialize(from: ptr.baseAddress!, count: self.underestimatedCount)
     }
-    return UnsafePointer(p)
+    return p
+  }
+
+  func cstring() -> UnsafePointer<CChar> {
+    return UnsafePointer(self.mutableCstring())
   }
 }

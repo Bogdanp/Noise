@@ -31,10 +31,10 @@ public final class Backend: @unchecked Sendable {
   private var totalReadDuration = Duration.zero
   private var totalWriteDuration = Duration.zero
 
-  public init(withZo zo: URL, andMod modname: String, andProc proc: String) {
+  public init(withZo zo: URL, andMod modname: String, andProc proc: String, andBootArguments ba: BootArguments = .init()) {
     out = FileHandleOutputPort(withHandle: ip.fileHandleForWriting)
     let server = Thread {
-      self.serve(zo, modname, proc)
+      self.serve(zo, modname, proc, ba)
     }
     server.name = "Noise Backend (Server)"
     server.qualityOfService = .userInitiated
@@ -47,10 +47,12 @@ public final class Backend: @unchecked Sendable {
     reader.start()
   }
 
-  private func serve(_ zo: URL, _ modname: String, _ proc: String) {
+  private func serve(_ zo: URL, _ modname: String, _ proc: String, _ ba: BootArguments) {
     logger.debug("\(#function): booting Racket")
     let t0 = ContinuousClock.now
-    let r = Racket(execPath: zo.path)
+    var ba = ba
+    ba.execPath = zo.path
+    let r = Racket(args: ba)
     let dt = ContinuousClock.now - t0
     logger.debug("\(#function): took \(dt) to boot Racket")
     r.bracket {
