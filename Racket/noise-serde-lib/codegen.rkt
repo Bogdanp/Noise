@@ -255,7 +255,12 @@
 
 (module+ main
   (require racket/cmdline)
+  (define mode 'write)
   (command-line
+   #:once-any
+   [("--checksum")
+    "generate an RPC checksum"
+    (set! mode 'checksum)]
    #:once-each
    [("--no-backend")
     "turn off backend code generation"
@@ -263,4 +268,11 @@
    #:args [modpath]
    (parameterize ([current-output-port (current-error-port)])
      (dynamic-require modpath #f)))
-  (write-Swift-code))
+  (case mode
+    [(checksum)
+     (displayln (get-rpc-checksum))]
+    [(write)
+     (write-Swift-code)]
+    [else
+     (eprintf "error: invalid mode~n")
+     (exit 1)]))

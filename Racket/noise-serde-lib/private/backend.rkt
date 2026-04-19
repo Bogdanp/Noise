@@ -3,12 +3,16 @@
 (require (for-syntax racket/base
                      syntax/parse/pre
                      "common.rkt")
+         file/sha1
+         racket/match
+         racket/port
          "sequencer.rkt"
          "serde.rkt")
 
 (provide
  define-rpc
 
+ get-rpc-checksum
  get-rpc-infos
  (struct-out rpc-arg)
  (struct-out rpc-info))
@@ -50,3 +54,15 @@
          (save-rpc-info! info)
          #,(when (eq? (syntax-local-context) 'module)
              #'(module+ rpc (provide name))))]))
+
+(define (get-rpc-checksum)
+  (bytes->hex-string
+   (sha1-bytes
+    (call-with-output-bytes
+     (lambda (out)
+       (define rpc-infos (get-rpc-infos))
+       (define sorted-rpc-ids (sort (hash-keys rpc-infos) <))
+       (for ([id (in-list sorted-rpc-ids)])
+         (match-define (rpc-info _ name _ _ _)
+           (hash-ref rpc-infos id))
+         (displayln name out)))))))
