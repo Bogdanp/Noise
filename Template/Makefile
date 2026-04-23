@@ -22,7 +22,7 @@ clean:
 ${RKT_MAIN_ZO}: ${RKT_FILES}
 	raco make -j 16 -v ${RKT_SRC}/main.rkt
 
-${CORE_ZO}: ${RKT_MAIN_ZO}
+${CORE_ZO}: ${RKT_MAIN_ZO} ${RKT_SRC}/Backend.sha1
 	mkdir -p ${RESOURCES_PATH}
 	rm -fr ${RUNTIME_PATH}
 	raco ctool \
@@ -32,6 +32,9 @@ ${CORE_ZO}: ${RKT_MAIN_ZO}
 
 ${APP_SRC}/Backend.swift: ${CORE_ZO}
 	raco noise-serde-codegen ${RKT_SRC}/main.rkt > $@
+
+${RKT_SRC}/Backend.sha1: ${RKT_FILES}
+	./bin/pbraco noise-serde-codegen --checksum ${RKT_SRC}/main.rkt > $@
 
 ${MANUAL_PATH}/index.html: manual/*.scrbl
 	raco scribble --html --dest ${MANUAL_PATH} +m manual/index.scrbl

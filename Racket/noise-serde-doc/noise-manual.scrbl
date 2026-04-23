@@ -287,6 +287,22 @@ ids to handler procedures.
   Returns a procedure that stops the server when applied.
 }
 
+@defproc[(get-rpc-checksum) (-> string?)]{
+  Returns a SHA1 checksum in hex format representing the hashed names of
+  all defined RPCs at the moment the procedure is called. No new RPCs
+  may be defined after this procedure is called.
+
+  You can use this procedure to ensure that a generated backend file
+  matches the compiled application.
+
+  @examples[
+    #:eval ev
+    (get-rpc-checksum)
+  ]
+
+  @history[#:added "0.12"]
+}
+
 
 @section[#:tag "callouts"]{Callouts}
 @defmodule[noise/unsafe/callout]

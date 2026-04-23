@@ -10,6 +10,7 @@
          "unsafe/callout.rkt")
 
 (provide
+ get-rpc-checksum
  define-callout
  define-rpc
  serve)
