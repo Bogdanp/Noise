@@ -56,8 +56,8 @@ let package = Package(
     .testTarget(
       name: "NoiseTest",
       dependencies: [
-        "Noise",
-        "NoiseBackend",
+        .target(name: "Noise", condition: .when(platforms: [.iOS, .macOS])),
+        .target(name: "NoiseBackend", condition: .when(platforms: [.iOS, .macOS])),
         "NoiseSerde",
       ],
       resources: [
